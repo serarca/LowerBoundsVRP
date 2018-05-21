@@ -6,31 +6,31 @@ from libcpp.string cimport string
 
 cdef extern from "lower_bounds.h":
    struct QPaths:
-      map[int,map[string,double]] f
-      map[int,map[string,double]] phi
-      map[int,map[string,string]] p
-      map[int,map[string,vector[string]]] q_route
-      map[int,map[string,vector[string]]] q_route_2
+      vector[vector[double]] f
+      vector[vector[double]] phi
+      vector[vector[int]] p
+      vector[vector[vector[int]]] q_route
+      vector[vector[vector[int]]] q_route_2
    QPaths construct_q_paths_(
-      string h,
+      int h,
       int truck_capacity,
-      vector[string] N,
-      map[string,map[string,double]] distance,
+      vector[int] N,
+      vector[vector[double]] distance,
       vector[int] values,
       map[double,int] values_pos,
-      map[string,int] quantities,
+      vector[int] quantities,
       string direction
       );
 
 cpdef construct_q_paths(h_,truck_capacity_,N_,distance_,values_,values_pos_,quantities_,direction_):
     cdef:
-        string h = h_
+        int h = h_
         int truck_capacity = truck_capacity_
-        vector[string] N = N_
-        map[string,map[string,double]] distance = distance_
+        vector[int] N = N_
+        vector[vector[double]] distance = distance_
         vector[int] values = values_
         map[double,int] values_pos = values_pos_
-        map[string,int] quantities = quantities_
+        vector[int] quantities = quantities_
         string direction = direction_
 
     cdef QPaths qpaths = construct_q_paths_(h,truck_capacity,N,distance,values,values_pos,quantities,direction)

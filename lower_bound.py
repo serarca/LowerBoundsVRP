@@ -37,16 +37,16 @@ def reduced_cost_dict(lamb, distance_dictionary, N):
                 distance[k1][k2] = distance[k1][k2] - 1.0/2*lamb[k2]
     return distance
 
-def construct_q_paths(h,truck_capacity,N,distance,values,values_pos,quantities,direction):    
-    
+def construct_q_paths(h,truck_capacity,N,distance,values,values_pos,quantities,direction):
+
     # Initialize the routes
     f = {}; phi = {}; p = {}; q_route = {}; q_route_2 = {};
     for l in range(len(values)):
         f[l] = {}; phi[l] = {}; p[l] = {}; q_route[l] = {}; q_route_2[l] = {};
         for n in N:
-            f[l][n] = float('inf'); phi[l][n] = float('inf'); p[l][n] = float('inf'); 
+            f[l][n] = float('inf'); phi[l][n] = float('inf'); p[l][n] = float('inf');
             q_route[l][n] = []; q_route_2[l][n] = [];
-            
+
     # Initialize the routes
     for n in N:
         q = quantities[n]
@@ -87,20 +87,20 @@ def construct_q_paths(h,truck_capacity,N,distance,values,values_pos,quantities,d
                 del g[x_i][arg_min_1]
                 arg_min_2 = min(g[x_i], key=g[x_i].get)
                 phi[l][x_i] = g[x_i][arg_min_2]
-                q_route[l][x_i] = g_type[x_i][arg_min_1] 
+                q_route[l][x_i] = g_type[x_i][arg_min_1]
                 q_route_2[l][x_i] = g_type[x_i][arg_min_2]
     return (f, phi, p, q_route, q_route_2)
 
-def construct_q_paths_debug(h,truck_capacity,N,distance,values,values_pos,quantities,direction):    
-    
+def construct_q_paths_debug(h,truck_capacity,N,distance,values,values_pos,quantities,direction):
+
     # Initialize the routes
     f = {}; phi = {}; p = {}; q_route = {}; q_route_2 = {};
     for l in range(len(values)):
         f[l] = {}; phi[l] = {}; p[l] = {}; q_route[l] = {}; q_route_2[l] = {};
         for n in N:
-            f[l][n] = float('inf'); phi[l][n] = float('inf'); p[l][n] = float('inf'); 
+            f[l][n] = float('inf'); phi[l][n] = float('inf'); p[l][n] = float('inf');
             q_route[l][n] = []; q_route_2[l][n] = [];
-            
+
     # Initialize the routes
     for n in N:
         q = quantities[n]
@@ -135,11 +135,24 @@ def construct_q_paths_debug(h,truck_capacity,N,distance,values,values_pos,quanti
         for x_i in N:
             q_p = Q - quantities[x_i]
             if q_p > 0:
-                arg_min_1 = min(g[x_i], key=g[x_i].get)
+                min_1 = float('inf')
+                min_2 = float('inf')
+                arg_min_1 = float('inf')
+                arg_min_2 = float('inf')
+                for x_j in N:
+                    if (x_i!=x_j):
+                        value = g[x_i][x_j];
+                        if (value<min_1):
+                            min_2 = min_1
+                            min_1 = value
+                            arg_min_2 = arg_min_1
+                            arg_min_1 = x_j
+                        elif (value<min_2):
+                            min_2 = value
+                            arg_min_2 = x_j
+
                 p[l][x_i] = arg_min_1
                 f[l][x_i] = g[x_i][arg_min_1]
-                del g[x_i][arg_min_1]
-                arg_min_2 = min(g[x_i], key=g[x_i].get)
                 phi[l][x_i] = g[x_i][arg_min_2]
                 coord = g_type[x_i][arg_min_1]
                 coord_2 = g_type[x_i][arg_min_2]
@@ -160,7 +173,7 @@ def construct_q_routes(h,truck_capacity,N,distance,values,values_pos,quantities)
         psi[l] = {}; psi_route[l] = {};
         for n in N:
             psi[l][n] = {}; psi_route[l][n] = {};
-            
+
     for l in range(len(values)):
         for n in N:
             min_w = quantities[n]
@@ -193,13 +206,13 @@ def construct_q_routes_debug(h,truck_capacity,N,distance,values,values_pos,quant
     f_l, phi_l, p_l, q_route_l, q_route_2_l = construct_q_paths_debug(h,truck_capacity,N,distance,values,values_pos,quantities,'left')
     f_r, phi_r, p_r, q_route_r, q_route_2_r = construct_q_paths_debug(h,truck_capacity,N,distance,values,values_pos,quantities,'right')
 
-    # Initialize the routes 
+    # Initialize the routes
     psi = {}; psi_route = {};
     for l in range(len(values)):
         psi[l] = {}; psi_route[l] = {};
         for n in N:
             psi[l][n] = {}; psi_route[l][n] = {};
-            
+
     for l in range(len(values)):
         for n in N:
             min_w = quantities[n]
@@ -256,7 +269,7 @@ def lower_bound(H,capacities,N,quantities,distance,mu,lamb):
         for l in range(len(values)):
             b[h][l] = {}
             for n in N:
-                b[h][l][n] = (psi[h][l][n]-mu[h])*quantities[n]/values[l]        
+                b[h][l][n] = (psi[h][l][n]-mu[h])*quantities[n]/values[l]
 
     min_b = {}
     arg_l = {}
@@ -297,12 +310,12 @@ def lower_bound(H,capacities,N,quantities,distance,mu,lamb):
         rho[h] = 0
     for i in N:
         rho[arg_h[i]] = rho[arg_h[i]] + (quantities[i]+0.0)/W[arg_h[i]][arg_arg_l[i]]
-    
+
     # Construct the duality vectors
     u = {}
     for n in N:
         u[n] = min_min_b[n] + lamb[n]
-        
+
     z_lb = np.sum([u[n] for n in N]) + np.sum([mu[h] for h in H])
 
     return (z_lb, theta, rho, u)
@@ -320,10 +333,10 @@ def optimize_lower_bound(iterations, z_ub, epsilon, H,capacities,N,quantities,di
         mu[h] = 0
     max_val = -float('inf')
     values = []
-        
+
     for i in range(iterations):
         distance = reduced_cost_dict(lamb, distance_dictionary, N)
-        
+
         z_lb, theta, rho, u = lower_bound(H,capacities,N,quantities,distance,mu,lamb)
         values.append(z_lb)
         if z_lb > max_val:
@@ -331,19 +344,19 @@ def optimize_lower_bound(iterations, z_ub, epsilon, H,capacities,N,quantities,di
             u_opt = copy.deepcopy(u)
             v_opt = copy.deepcopy(mu)
             lamb_opt = copy.deepcopy(lamb)
-            
+
         # Compute the new parameters
         gamma = (z_ub - z_lb)/(np.sum((np.array(theta.values())-1)**2) + np.sum((np.array(rho.values())-1)**2))
         # New lambda
         for j in N:
             lamb[j] = lamb[j] - epsilon*gamma*(theta[j]-1)
         for h in H:
-            mu[h] = np.min([mu[h] - epsilon*gamma*(rho[h]-1),0])            
+            mu[h] = np.min([mu[h] - epsilon*gamma*(rho[h]-1),0])
         print(z_lb)
-        
+
         if np.sum(np.abs(lamb.values())) > 10**16:
             raise ValueError('Lambda exploding')
-        
+
         # Rule for updating epsilon
         if len(values)>=7:
             grad = [values[i+1]-values[i] for i in range(len(values)-1)]
@@ -353,12 +366,9 @@ def optimize_lower_bound(iterations, z_ub, epsilon, H,capacities,N,quantities,di
                 print ('new epsilon:%f' % epsilon)
                 values = []
             if np.sum(np.array(grad[len(grad)-5:len(grad)])>0) >= 5:
-                
+
                 epsilon = epsilon*1.2
                 print ('new epsilon:%f' % epsilon)
                 values = []
-    
-    return (max_val,u_opt,v_opt,lamb_opt)
-    
 
-        
+    return (max_val,u_opt,v_opt,lamb_opt)

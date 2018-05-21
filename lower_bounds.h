@@ -9,18 +9,20 @@ using namespace std;
 
 // The struct of results
 struct QPaths {
-   map<int,map<string,double>> f;
-   map<int,map<string,double>> phi;
-   map<int,map<string,string>> p;
-   map<int,map<string,vector<string>>> q_route;
-   map<int,map<string,vector<string>>> q_route_2;
+   vector<vector<double>> f;
+   vector<vector<double>> phi;
+   vector<vector<int>> p;
+   vector<vector<vector<int>>> q_route;
+   vector<vector<vector<int>>> q_route_2;
 };
 
-QPaths construct_q_paths_(string h,
+QPaths construct_q_paths_(
+   int h,
    int truck_capacity,
-   vector<string> N,
-   map<string,map<string,double>> distance,
+   vector<int> N,
+   vector<vector<double>> distance_dict,
    vector<int> values,
    map<double,int> values_pos,
-   map<string,int> quantities,
-   string direction);
+   vector<int> quantities,
+   string direction
+);
