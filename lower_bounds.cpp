@@ -27,13 +27,13 @@ struct QPaths {
 // This function returns the q-paths that the q-routes function uses
 // to calulate lower bounds
 QPaths construct_q_paths_(
-   int& h,
-   int& truck_capacity,
-   vector<int>& N,
-   vector<vector<double>>& distance_dict,
-   vector<int>& values,
-   map<double,int>& values_pos,
-   vector<int>& quantities,
+   int h,
+   int truck_capacity,
+   vector<int> N,
+   vector<vector<double>> distance_dict,
+   vector<int> values,
+   map<double,int> values_pos,
+   vector<int> quantities,
    string direction
 ){
    //Calculate lengths
