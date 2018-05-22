@@ -4,24 +4,117 @@
 #include <iostream>
 #include <limits>
 #include <iterator>
+#include <numeric>
+#include "lower_bounds.h"
+#include <algorithm>
+
 
 using namespace std;
-// The struct of results for q-routes
-struct QRoutes {
-   vector<vector<double>> psi;
-   vector<vector<vector<int>>> psi_route;
-};
 
-// The struct of results
-struct QPaths {
-   vector<vector<double>> f;
-   vector<vector<double>> phi;
-   vector<vector<int>> p;
-   vector<vector<vector<int>>> q_route;
-   vector<vector<vector<int>>> q_route_2;
-};
+PossibleValues possible_values(vector<int>& quantities, int truck_capacity){
+   vector<int> values(truck_capacity);
+   iota(std::begin(values), std::end(values), 1);
+   map<int, int> values_pos;
+   for (int i = 0; i < (int) values.size(); i++){
+      values_pos[values[i]] = i;
+   }
+   PossibleValues possible;
+   possible.values = values;
+   possible.values_pos = values_pos;
+   return possible;
+}
+
+// Write lower bounds
+LowerBound lower_bound_(
+   vector<int> H,
+   vector<int> capacities,
+   vector<int> N,
+   vector<int> quantities,
+   vector<vector<double>> distance_dict,
+   vector<double> mu,
+   vector<double> lamb
+){
+
+   //Calculate lengths
+   int len_N = N.size();
+   int len_H = H.size();
+
+   //The vectors of minima
+   vector<vector<int>> b(len_N, vector<int>(len_H));
+   vector<vector<int>> val(len_N, vector<int>(len_H));
+   vector<vector<vector<int>>> b_routes(len_N, vector<vector<int>>(len_H, vector<int>(0)));
 
 
+   for (int h = 0; h < len_H; h++){
+      int truck_capacity = capacities[h];
+      PossibleValues possible = possible_values(quantities, truck_capacity);
+      QRoutes qroutes = construct_q_routes_(H[h], truck_capacity, N, distance_dict, possible.values, possible.values_pos, quantities);
+      // We find the minimum l
+      int len_values = possible.values.size();
+      for (int n = 0; n < len_N; n++){
+         vector<double> b_values(len_values);
+         for (int l = 0; l < len_values; l++){
+            b_values[l] = (qroutes.psi[l][n] - mu[h]) * (double)quantities[n]/(double)possible.values[l];
+         }
+         std::vector<double>::iterator l_it = std::min_element(std::begin(b_values), std::end(b_values));
+         int l_min = std::distance(std::begin(b_values), l_it);
+         b[n][h] = b_values[l_min];
+         b_routes[n][h] = qroutes.psi_route[l_min][n];
+         val[n][h] = possible.values[l_min];
+      }
+   }
+
+   // The second vector of minima
+   vector<int> b_min(len_N);
+   vector<int> val_min(len_N);
+   vector<int> h_min(len_N);
+   vector<vector<int>> b_min_routes(len_N, vector<int>(0));
+   for (int n = 0; n < len_N; n++){
+      std::vector<int>::iterator h_it = std::min_element(std::begin(b[n]), std::end(b[n]));
+      int h_m = std::distance(std::begin(b[n]), h_it);
+      b_min[n] = b[n][h_m];
+      b_min_routes[n] = b_routes[n][h_m];
+      val_min[n] = val[n][h_m];
+      h_min[n] = h_m;
+   }
+
+   //Calculate number of visits to each node
+   vector<vector<int>> visits(len_N,vector<int>(len_N,0));
+   for (int n = 0; n < len_N; n++){
+      for(vector<int>::iterator it_route = b_min_routes[n].begin();  it_route!=b_min_routes[n].end(); ++it_route){
+         visits[n][*it_route] += 1;
+      }
+   }
+   // Construct theta
+   vector<double> theta(len_N,0);
+   for (int j = 0; j<len_N; j++){
+      for (int i=0; i<len_N; i++){
+         theta[j] += ((double) quantities[i])/((double) val_min[i])*(double)visits[i][j];
+      }
+   }
+   // Construct rho
+   vector<double> rho(len_H,0);
+   for (int n=0; n<len_N; n++){
+      rho[h_min[n]] += ((double) quantities[n])/((double) val_min[n]);
+   }
+
+   // Construct dual variables
+   vector<double> u(len_N,0);
+   for (int n=0; n<len_N; n++){
+      u[n] = b_min[n] + lamb[n];
+   }
+
+   int z_lb = std::accumulate(u.begin(), u.end(), 0) + std::accumulate(mu.begin(), mu.end(), 0);
+
+   LowerBound lb;
+   lb.z_lb = z_lb;
+   lb.u = u;
+   lb.theta = theta;
+   lb.rho = rho;
+
+   return lb;
+
+}
 
 
 // This function returns the q-paths that the q-routes function uses
@@ -32,7 +125,7 @@ QPaths construct_q_paths_(
    vector<int> N,
    vector<vector<double>> distance_dict,
    vector<int> values,
-   map<double,int> values_pos,
+   map<int,int> values_pos,
    vector<int> quantities,
    string direction
 ){
@@ -152,7 +245,7 @@ QRoutes construct_q_routes_(
    vector<int> N,
    vector<vector<double>> distance_dict,
    vector<int> values,
-   map<double,int> values_pos,
+   map<int,int> values_pos,
    vector<int> quantities
 ){
    QPaths qpaths_l = construct_q_paths_(h,truck_capacity,N,distance_dict,values,values_pos,quantities,"left");
