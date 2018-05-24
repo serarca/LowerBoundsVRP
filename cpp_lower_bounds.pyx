@@ -14,6 +14,11 @@ cdef extern from "lower_bounds.h":
    struct QRoutes:
       vector[vector[double]] psi
       vector[vector[vector[int]]] psi_route
+   struct LowerBound:
+      double z_lb
+      vector[double] theta
+      vector[double] rho
+      vector[double] u
    QPaths construct_q_paths_(
       int h,
       int truck_capacity,

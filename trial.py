@@ -27,20 +27,36 @@ M_p = np.random.rand(m,2)
 N_p = np.random.rand(n,2)
 
 quantities = {f: 1 for i,f in enumerate(N)}
-capacities = {h:(i%2 + 2)*2*2 for i,h in enumerate(H)}
+capacities = {h:5 for i,h in enumerate(H)}
 type_dist = 'euclid'
 
 vrp = VRPClass.VRP(H, N, H_p, N_p, quantities, capacities, type_dist, M = M, M_p = M_p)
 #vrp.draw_problem()
 
-h = 'h_0'
-truck_capacity = capacities[h]
-N
-distance = vrp.distance_dict
-values = lower_bound.possible_values(quantities,capacities[h])
-values_pos = dict(zip(values,list(range(len(values)))))
-quantities
-direction = "left"
 
-from cpp_lower_bounds import construct_q_paths
-print(construct_q_paths(h,truck_capacity,N,distance,values,values_pos,quantities,direction))
+from cpp_lower_bounds import lower_bound as lb
+#lower_bound.lower_bound()
+
+lamb = {}
+mu = {}
+for j in N:
+    lamb[j] = 0
+for h in H:
+    mu[h] = 0
+#print(lower_bound.lower_bound(H,capacities,N,quantities,distance,mu,lamb)[0])
+
+H_ = np.array(range(len(H)))
+N_ = np.array(range(len(N)))
+capacities_ = [capacities[h] for h in H]
+quantities_ = [quantities[n] for n in N]
+print(vrp.distance_dict)
+distance_ = vrp.distance
+print(distance_)
+
+mu_ = [mu[h] for h in H]
+lamb_ = [lamb[n] for n in N]
+print(len(H_))
+print(len(N_))
+
+result = lb(H_,capacities_,N_,quantities_,distance_,mu_,lamb_)
+print (result.z_lb)

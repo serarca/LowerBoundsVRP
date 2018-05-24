@@ -5,7 +5,7 @@ import numpy
 
 
 extensions = [
-    Extension('cpp_lower_bounds', ['cpp_lower_bounds.pyx', 'lower_bounds.cpp'],
+    Extension('hello', ['hello.pyx'],
               include_dirs=[numpy.get_include()],
               extra_compile_args=['-std=c++11'],
               language='c++'
@@ -14,5 +14,5 @@ extensions = [
 
 setup(
     ext_modules=cythonize(extensions, gdb_debug=True),
-    # extra_compile_args=["-w", '-g'],
+    extra_compile_args=["-w", '-g'],
 )

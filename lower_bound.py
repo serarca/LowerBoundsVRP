@@ -15,7 +15,6 @@ from cpp_lower_bounds import construct_q_routes as construct_q_routes_c_unf
 
 def construct_q_routes_c(H,h,truck_capacity,N,distance,values,values_pos,quantities):
     h_ = len(N) + H.index(h)
-    truck_capacity_ = capacities[h]
     N_ = np.array(range(len(N)))
     distance_ = vrp.distance
     values_ = lower_bound.possible_values(quantities,capacities[h])
