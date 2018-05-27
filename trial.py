@@ -16,7 +16,7 @@ lower_bound = reload(lower_bound)
 # We first generate a random problem
 k = 2
 m = 1
-n = 5
+n = 10
 
 H = ['h_'+str(i) for i in range(k)]
 M = ['m_'+str(i) for i in range(m)]
@@ -45,18 +45,20 @@ for h in H:
     mu[h] = 0
 #print(lower_bound.lower_bound(H,capacities,N,quantities,distance,mu,lamb)[0])
 
-H_ = np.array(range(len(H)))
-N_ = np.array(range(len(N)))
-capacities_ = [capacities[h] for h in H]
-quantities_ = [quantities[n] for n in N]
-print(vrp.distance_dict)
-distance_ = vrp.distance
-print(distance_)
+H_ = (np.array(range(len(H)))+len(N)).astype(int)
+N_ = np.array(range(len(N))).astype(int)
+capacities_ = np.array([capacities[h] for h in H]).astype(int)
+quantities_ = np.array([quantities[n] for n in N]).astype(int)
+#print(vrp.distance_dict)
+distance_ = vrp.distance.astype('float64')
+#print(distance_)
 
-mu_ = [mu[h] for h in H]
-lamb_ = [lamb[n] for n in N]
-print(len(H_))
-print(len(N_))
+mu_ = np.array([mu[h] for h in H]).astype('float64')
+lamb_ = np.array([lamb[n] for n in N]).astype('float64')
+#print(len(H_))
+#print(len(N_))
 
 result = lb(H_,capacities_,N_,quantities_,distance_,mu_,lamb_)
-print (result.z_lb)
+print (result['z_lb'])
+z_lb, theta, rho, u = lower_bound.lower_bound(H,capacities,N,quantities,vrp.distance_dict,mu,lamb)
+print(z_lb)

@@ -14,6 +14,7 @@ using namespace std;
 
 PossibleValues possible_values(vector<int>& quantities, int truck_capacity){
    vector<int> values(truck_capacity);
+
    for (int i=0; i< truck_capacity; i++){
       values[i] = i + 1;
    }
@@ -56,19 +57,25 @@ LowerBound lower_bound_(
 
 
       // We find the minimum l
+
       int len_values = possible.values.size();
       for (int n = 0; n < len_N; n++){
          vector<double> b_values(len_values);
+
          for (int l = 0; l < len_values; l++){
             b_values[l] = (qroutes.psi[l][n] - mu[h]) * (double)quantities[n]/(double)possible.values[l];
          }
+
          std::vector<double>::iterator l_it = std::min_element(b_values.begin(), b_values.end());
          int l_min = std::distance(b_values.begin(), l_it);
          b[n][h] = b_values[l_min];
          b_routes[n][h] = qroutes.psi_route[l_min][n];
          val[n][h] = possible.values[l_min];
 
+
       }
+
+
    }
 
    // The second vector of minima
@@ -117,6 +124,7 @@ LowerBound lower_bound_(
       u[n] = b_min[n] + lamb[n];
    }
    double start = 0;
+
    double z_lb = std::accumulate(u.begin(), u.end(), start) + std::accumulate(mu.begin(), mu.end(), start);
 
    LowerBound lb;
@@ -142,35 +150,6 @@ QPaths construct_q_paths_(
    vector<int> quantities,
    string direction
 ){
-   cout<<"q_path"<<endl;
-   cout<<"h"<<endl;
-   cout<<h<<endl;
-   cout<<"truck_capacity"<<endl;
-   cout<<truck_capacity<<endl;
-   cout<<"N"<<endl;
-   for (auto v:N)
-      cout<<v<<" ";
-   cout<<endl;
-   cout<<"distance"<<endl;
-   for (auto v:distance_dict){
-      for (auto a:v)
-         cout<<a<<" ";
-      cout<<endl;
-   }
-   cout<<endl;
-   cout<<"values"<<endl;
-   for (auto v:values)
-      cout<<v<<" ";
-   cout<<endl;
-   cout<<"values_pos"<<endl;
-   for (auto v:values_pos)
-      cout<<(v.second)<<" ";
-   cout<<endl;
-   cout<<"quantities"<<endl;
-   for (auto v:quantities)
-      cout<<v<<" ";
-   cout<<endl;
-
    //Calculate lengths
    int len_values = values.size();
    int len_N = N.size();
@@ -210,15 +189,14 @@ QPaths construct_q_paths_(
 
 
    for(int l = 0; l < len_values; l++) {
+
       int Q = values[l];
       vector<vector<double>> g(len_N,vector<double>(len_N));
       vector<vector<vector<int>>> g_type(len_N,vector<vector<int>>(len_N,vector<int>(2,0)));
       for (int x_i = 0; x_i < len_N; x_i++){
          int q_p = Q - quantities[x_i];
          if (q_p > 0){
-            cout<<q_p<<endl;
             int l_p = values_pos[q_p];
-            cout<<l_p<<endl;
             for (int x_j = 0; x_j < len_N; x_j++){
                if (x_i != x_j){
                   if (p[l_p][x_j]!=x_i){
@@ -235,6 +213,7 @@ QPaths construct_q_paths_(
             }
          }
       }
+
       for (int x_i = 0; x_i < len_N; x_i++){
          int q_p = Q - quantities[x_i];
          if (q_p > 0){
@@ -262,7 +241,6 @@ QPaths construct_q_paths_(
             phi[l][x_i] = min_2;
             vector<int> &coord = g_type[x_i][arg_min_1];
             vector<int> &coord_2 = g_type[x_i][arg_min_2];
-
             q_route[l][x_i] = (coord[0] == 0) ? q_route[coord[1]][arg_min_1] : q_route_2[coord[1]][arg_min_1];
             q_route_2[l][x_i] = (coord_2[0] == 0) ? q_route[coord_2[1]][arg_min_2] : q_route_2[coord_2[1]][arg_min_2];
             q_route[l][x_i].push_back(x_i);
@@ -379,6 +357,7 @@ QRoutes construct_q_routes_(
          }
       }
    }
+
    QRoutes qroutes;
    qroutes.psi = psi;
    qroutes.psi_route = psi_route;

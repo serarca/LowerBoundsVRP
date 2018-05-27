@@ -84,6 +84,5 @@ cpdef lower_bound(H_, capacities_, N_, quantities_, distance_, mu_, lamb_):
       vector[vector[double]] distance = distance_,
       vector[double] mu = mu_,
       vector[double] lamb = lamb_
-
    cdef LowerBound lb = lower_bound_(H, capacities, N, quantities, distance, mu, lamb)
    return lb

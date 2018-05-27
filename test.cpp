@@ -56,6 +56,7 @@ int main(){
          distance_dict[i][j] = sqrt(pow(x[i]-x[j],2)+pow(y[i]-y[j],2));
       }
    }
+   
 
 
 

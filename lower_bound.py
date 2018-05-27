@@ -11,20 +11,7 @@ from scipy.spatial.distance import pdist
 import copy
 from copy import deepcopy
 
-from cpp_lower_bounds import construct_q_routes as construct_q_routes_c_unf
 
-def construct_q_routes_c(H,h,truck_capacity,N,distance,values,values_pos,quantities):
-    h_ = len(N) + H.index(h)
-    N_ = np.array(range(len(N)))
-    distance_ = vrp.distance
-    values_ = lower_bound.possible_values(quantities,capacities[h])
-    values_pos_ = dict(zip(values,list(range(len(values)))))
-    quantities_ = [quantities[n] for n in N]
-    direction_ = "left"
-    results_c = construct_q_routes_c_unf(h_,truck_capacity_,N_,distance_,values_,values_pos_,quantities_,direction_)
-    psi_c = {i:{'n_'+str(j):results_c['psi'][i][j] for j in range(len(results_c['psi'][i]))} for i in range(len(results_c['psi']))}
-    psi_route_c = {i:{'n_'+str(j):[('n_'+str(results_c['psi_route'][i][j][k]) if (results_c['psi_route'][i][j][k]<len(N)) else ('h_'+str(results_c['psi_route'][i][j][k] - len(N)))) for k in range(len(results_c['psi_route'][i][j]))] for j in range(len(results_c['psi_route'][i]))} for i in range(len(results_c['psi_route']))}
-    return psi_c, psi_route_c
 
 def possible_values(quantities, maximum):
     possible_values = []
