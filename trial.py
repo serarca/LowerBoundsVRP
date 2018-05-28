@@ -34,31 +34,12 @@ vrp = VRPClass.VRP(H, N, H_p, N_p, quantities, capacities, type_dist, M = M, M_p
 #vrp.draw_problem()
 
 
-from cpp_lower_bounds import lower_bound as lb
+import cpp_lower_bounds
 #lower_bound.lower_bound()
 
-lamb = {}
-mu = {}
-for j in N:
-    lamb[j] = 0
-for h in H:
-    mu[h] = 0
-#print(lower_bound.lower_bound(H,capacities,N,quantities,distance,mu,lamb)[0])
 
-H_ = (np.array(range(len(H)))+len(N)).astype(int)
-N_ = np.array(range(len(N))).astype(int)
-capacities_ = np.array([capacities[h] for h in H]).astype(int)
-quantities_ = np.array([quantities[n] for n in N]).astype(int)
-#print(vrp.distance_dict)
-distance_ = vrp.distance.astype('float64')
-#print(distance_)
 
-mu_ = np.array([mu[h] for h in H]).astype('float64')
-lamb_ = np.array([lamb[n] for n in N]).astype('float64')
-#print(len(H_))
-#print(len(N_))
+lower_bound.optimize_lower_bound_c(100, 10, 0.1, H,capacities,N,quantities,vrp.distance)
 
-result = lb(H_,capacities_,N_,quantities_,distance_,mu_,lamb_)
-print (result['z_lb'])
-z_lb, theta, rho, u = lower_bound.lower_bound(H,capacities,N,quantities,vrp.distance_dict,mu,lamb)
-print(z_lb)
+
+lower_bound.optimize_lower_bound(100, 10, 0.1, H,capacities,N,quantities,vrp.distance_dict)

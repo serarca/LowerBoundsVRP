@@ -10,6 +10,7 @@ from scipy.spatial import distance_matrix
 from scipy.spatial.distance import pdist
 import copy
 from copy import deepcopy
+import cpp_lower_bounds
 
 
 
@@ -38,6 +39,17 @@ def reduced_cost_dict(lamb, distance_dictionary, N):
             if k2 in N:
                 distance[k1][k2] = distance[k1][k2] - 1.0/2*lamb[k2]
     return distance
+
+# Generates a matrix of reduced costs given a distance and a lambda vector
+def reduced_cost_mat(lamb_, distance_mat, N_):
+    distance = copy.deepcopy(distance_mat)
+    for i in range(len(N_)):
+        for j in range(distance_mat.shape[0]):
+            distance[i][j] -= 1.0/2*lamb_[i]
+    for i in range(len(N_)):
+        for j in range(distance_mat.shape[0]):
+            distance[j][i] -= 1.0/2*lamb_[i]
+    return distance.astype('float64')
 
 def construct_q_paths(h,truck_capacity,N,distance,values,values_pos,quantities,direction):
 
@@ -372,5 +384,64 @@ def optimize_lower_bound(iterations, z_ub, epsilon, H,capacities,N,quantities,di
                 epsilon = epsilon*1.2
                 print ('new epsilon:%f' % epsilon)
                 values = []
+        if (np.array_equal(np.array(theta.values()), np.ones(len(N))) and np.array_equal(np.array(rho.values()), np.ones(len(H)))):
+            print("reached zero gradient")
+            return (max_val,u_opt,v_opt,lamb_opt)
+    return (max_val,u_opt,v_opt,lamb_opt)
+
+def optimize_lower_bound_c(iterations, z_ub, epsilon, H,capacities,N,quantities,distance_mat):
+
+    # Initialize the parameters
+    mu_ = np.zeros(len(H), dtype = "float64")
+    lamb_ = np.zeros(len(N), dtype = "float64")
+    max_val = -float('inf')
+    values = []
+
+    H_ = (np.array(range(len(H)))+len(N)).astype(int)
+    N_ = np.array(range(len(N))).astype(int)
+    capacities_ = np.array([capacities[h] for h in H]).astype(int)
+    quantities_ = np.array([quantities[n] for n in N]).astype(int)
+
+    for i in range(iterations):
+        distance_ = reduced_cost_mat(lamb_, distance_mat, N_)
+        results_c = cpp_lower_bounds.lower_bound(H_,capacities_,N_,quantities_,distance_,mu_,lamb_)
+        z_lb = results_c["z_lb"]
+        theta = np.array(results_c["theta"]).astype("float64")
+        rho = np.array(results_c["rho"]).astype("float64")
+        u = np.array(results_c["u"]).astype("float64")
+        print(z_lb)
+        values.append(z_lb)
+        if z_lb > max_val:
+            max_val = copy.deepcopy(z_lb)
+            u_opt = copy.deepcopy(u)
+            v_opt = copy.deepcopy(mu_)
+            lamb_opt = copy.deepcopy(lamb_)
+
+        # Compute the new parameters
+        gamma = (z_ub - z_lb)/(np.sum((theta-1)**2) + np.sum((rho-1)**2))
+        # New lambda
+        lamb_ = np.array(lamb_ - epsilon*gamma*(theta-1))
+        # New mu
+        mu_ = np.array(np.minimum(mu_ - epsilon*gamma*(rho-1),0)).astype('float64')
+
+        if np.sum(np.abs(lamb_)) > 10**16:
+            raise ValueError('Lambda exploding')
+
+        # Rule for updating epsilon
+        if len(values)>=7:
+            grad = [values[i+1]-values[i] for i in range(len(values)-1)]
+            jumps = [np.sign(grad[i+1])!=np.sign(grad[i]) for i in range(len(grad)-1)]
+            if np.sum(jumps[len(jumps)-5:len(jumps)])>=3:
+                epsilon = epsilon/1.5
+                print ('new epsilon:%f' % epsilon)
+                values = []
+            if np.sum(np.array(grad[len(grad)-5:len(grad)])>0) >= 5:
+
+                epsilon = epsilon*1.2
+                print ('new epsilon:%f' % epsilon)
+                values = []
+        if (np.array_equal(theta, np.ones(len(N_))) and np.array_equal(rho, np.ones(len(H_)))):
+            print("reached zero gradient")
+            return (max_val,u_opt,v_opt,lamb_opt)
 
     return (max_val,u_opt,v_opt,lamb_opt)
