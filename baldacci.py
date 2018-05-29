@@ -74,3 +74,107 @@ def GENPATH(Delta, gamma, h, capacity, N, quantities, distance, direction):
                     else:
                         j += 1
     return P
+
+def GENROUTE(Delta, gamma, h, capacity, N, quantities, distance):
+    P_l = GENPATH(Delta, gamma, h, capacity, N, quantities, distance, direction = 'left')
+    P_r = GENPATH(Delta, gamma, h, capacity, N, quantities, distance, direction = 'right')
+
+    T = {}
+    R = {}
+    added = {}
+    for n in N:
+        added[n] = set((-1,-1))
+        if len(P_l[n])>1 and len(P_r[n])>1:
+            T[n] = [[(0,0),P_l[n][0]['cost']+P_r[n][0]['cost']]]
+            added[n].add((0,0))
+        else:
+            T[n] = []
+        R[n] = []
+
+    valid_v = [0,0,0,0]
+    while True:
+
+        # Calculate costs
+        costs = {}
+        for n in N:
+            if len(T[n])>0:
+                costs[n] = T[n][0][1]
+        if len(costs) == 0:
+            break
+        min_costs_n = min(costs, key = costs.get)
+        min_cost = costs[min_costs_n]
+        indices = T[min_costs_n].pop(0)[0]
+        path_l = P_l[min_costs_n][indices[0]]
+        path_r = P_r[min_costs_n][indices[1]]
+        if min_cost> gamma:
+            break
+        total_load = path_l['load'] + path_r['load'] - quantities[min_costs_n]
+        valid = True
+        if total_load > capacity:
+            valid = False
+            valid_v[0] = valid_v[0]+1
+
+        elif (np.min([path_l['load'],path_r['load']]) < total_load/2.0 or
+            np.max([path_l['load'],path_r['load']]) > total_load/2.0+quantities[min_costs_n]):
+            valid = False
+            valid_v[1] = valid_v[1]+1
+
+        elif (set(path_l['path']).intersection(set(path_r['path'])) != set([h,min_costs_n])):
+            valid = False
+            valid_v[2] = valid_v[2]+1
+        else:
+            for n in N:
+                for r in R[n]:
+                    if set(r['path']) == set(path_l['path']+path_r['path']):
+                        valid = False
+                        valid_v[3] = valid_v[3] + 1
+                        break
+                if not valid:
+                    break
+        if valid:
+            R[min_costs_n].append({'path':path_l['path'][0:(len(path_l['path'])-1)]+list(reversed(path_r['path'])),
+                                  'cost':path_l['cost']+path_r['cost'],
+                                  'load':total_load,
+                                  'median':min_costs_n,
+                                  'indices':indices})
+
+        new_route_1 = (indices[0]+1,indices[1])
+        new_route_2 = (indices[0],indices[1]+1)
+        # If routes do not exist, transform them into the first route
+        if (indices[0]+1 >= len (P_l[min_costs_n])):
+            new_route_1 = (0,0)
+        if (indices[1]+1 >= len (P_r[min_costs_n])):
+            new_route_2 = (0,0)
+        new_routes = [new_route_1,new_route_2]
+        new_costs = [P_l[min_costs_n][new_routes[0][0]]['cost']+P_r[min_costs_n][new_routes[0][1]]['cost'],
+                     P_l[min_costs_n][new_routes[1][0]]['cost']+P_r[min_costs_n][new_routes[1][1]]['cost']]
+        min_cost = np.min(new_costs)
+        max_cost = np.max(new_costs)
+        min_route = new_routes[np.argmin(new_costs)]
+        max_route = new_routes[(np.argmin(new_costs)+1)%2]
+        insert_index = 0
+        # Check if the route has been added previously
+        if not min_route in added[min_costs_n]:
+            for i in range(len(T[min_costs_n])):
+                cost = T[min_costs_n][i][1]
+                if min_cost<cost:
+                    break
+                insert_index+=1
+            T[min_costs_n].insert(insert_index,[min_route,min_cost])
+            insert_index +=1
+            added[min_costs_n].add(min_route)
+        # Check if the route has been added previously
+        if not max_route in added[min_costs_n]:
+            for i in range(insert_index, len(T[min_costs_n])):
+                cost = T[min_costs_n][i][1]
+                if max_cost<cost:
+                    break
+                insert_index+=1
+            T[min_costs_n].insert(insert_index,[max_route,max_cost])
+            added[min_costs_n].add(max_route)
+
+    # Verify that the routes are not always empty
+    for n in N:
+        if len(R[n]) == 0:
+            R[n] = [{'path':[h,n,h], 'cost':distance[h][n] + distance[n][h], 'load': quantities[n]}]
+    return R

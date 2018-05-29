@@ -9,11 +9,13 @@
 #include <random>
 #include <functional>
 #include<cmath>
+#include "lower_bounds.cpp"
+#include "baldacci.cpp"
 
 
 
 using namespace std;
-/*
+
 void print_path(Path p){
    cout<<"\t Path: ";
    for (auto n:p.path){
@@ -28,6 +30,24 @@ void print_path(Path p){
    cout<<"Lower Bound: "<<p.lower_bound<<" "<<endl;
 }
 
+void print_route(Route r){
+   cout<<"\t Route_l: ";
+   for (auto n:(r.path_l->path)){
+      cout<<n<<" ";
+   }
+   cout<<"\t Route_r: ";
+   for (auto n:(r.path_r->path)){
+      cout<<n<<" ";
+   }
+   cout<<"Set: ";
+   for (auto n:r.nodes){
+      cout<<n<<" ";
+   }
+   cout<<"Cost: "<<r.cost<<" ";
+   cout<<"Load: "<<r.load<<" ";
+   cout<<"Median: "<<r.median<<" "<<endl;
+}
+
 void print_Paths(vector<list<Path>> paths){
    int i = 0;
    for (auto end:paths){
@@ -40,7 +60,20 @@ void print_Paths(vector<list<Path>> paths){
       }
    }
 }
-*/
+
+void print_Routes(vector<list<Route>> routes){
+   int i = 0;
+   for (auto end:routes){
+      cout<<"End Node: "<<i;
+      cout<<"Length: "<<end.size()<<endl;
+      i+=1;
+
+      for (auto r:end){
+         print_route(r);
+      }
+   }
+}
+
 int main(){
 
    int H_len = 3;
@@ -85,19 +118,19 @@ int main(){
    }
 
 
-   //LowerBound lb = lower_bound_(H, capacities, N, quantities, distance_dict, mu, lamb);
-   //cout<<lb.z_lb<<endl;
+   LowerBound lb = lower_bound_(H, capacities, N, quantities, distance_dict, mu, lamb);
+   cout<<lb.z_lb<<endl;
 
-   int Delta = 100;
+   int Delta = 10;
    double gamma = 12;
    int h = H[0];
    int capacity = capacities[0];
    string direction = "left";
-   //vector<list<Path>> p = GENPATH(Delta, gamma, h, capacity, N, quantities, distance_dict, direction);
-
-
+   vector<list<Path>> p = GENPATH(Delta, gamma, h, capacity, N, quantities, distance_dict, direction);
+   vector<list<Route>> r = GENROUTE(Delta, gamma, h, capacity, N, quantities, distance_dict);
 
    //print_Paths(p);
+   print_Routes(r);
 
    return 1;
 }

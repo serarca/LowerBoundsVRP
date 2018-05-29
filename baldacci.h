@@ -16,3 +16,15 @@ struct Path{
    int load;
    int end;
 };
+
+//The struct of paths
+struct Route{
+   list<Path>::iterator path_l;
+   list<Path>::iterator path_r;
+   int index_l;
+   int index_r;
+   set<int> nodes;
+   double cost;
+   int load;
+   int median;
+};
