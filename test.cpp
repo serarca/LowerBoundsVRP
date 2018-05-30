@@ -11,73 +11,25 @@
 #include<cmath>
 #include "lower_bounds.cpp"
 #include "baldacci.cpp"
+template class std::set<tuple<int,int>>;
+# include <chrono>
+using  ms = chrono::milliseconds;
+using get_time = chrono::steady_clock ;
 
 
 
 using namespace std;
-
-void print_path(Path p){
-   cout<<"\t Path: ";
-   for (auto n:p.path){
-      cout<<n<<" ";
-   }
-   cout<<"Set: ";
-   for (auto n:p.nodes){
-      cout<<n<<" ";
-   }
-   cout<<"Cost: "<<p.cost<<" ";
-   cout<<"Load: "<<p.load<<" ";
-   cout<<"Lower Bound: "<<p.lower_bound<<" "<<endl;
+void print_set(set<tuple<int,int>> s){
+   for (auto n:s)
+      cout<<"("<<get<0>(n)<<","<<get<1>(n)<<")";
+   cout<<endl;
 }
 
-void print_route(Route r){
-   cout<<"\t Route_l: ";
-   for (auto n:(r.path_l->path)){
-      cout<<n<<" ";
-   }
-   cout<<"\t Route_r: ";
-   for (auto n:(r.path_r->path)){
-      cout<<n<<" ";
-   }
-   cout<<"Set: ";
-   for (auto n:r.nodes){
-      cout<<n<<" ";
-   }
-   cout<<"Cost: "<<r.cost<<" ";
-   cout<<"Load: "<<r.load<<" ";
-   cout<<"Median: "<<r.median<<" "<<endl;
-}
-
-void print_Paths(vector<list<Path>> paths){
-   int i = 0;
-   for (auto end:paths){
-      cout<<"End Node: "<<i;
-      cout<<"Length: "<<end.size()<<endl;
-      i+=1;
-
-      for (auto p:end){
-         print_path(p);
-      }
-   }
-}
-
-void print_Routes(vector<list<Route>> routes){
-   int i = 0;
-   for (auto end:routes){
-      cout<<"End Node: "<<i;
-      cout<<"Length: "<<end.size()<<endl;
-      i+=1;
-
-      for (auto r:end){
-         print_route(r);
-      }
-   }
-}
 
 int main(){
 
-   int H_len = 3;
-   int N_len = 12;
+   int H_len = 30;
+   int N_len = 200;
    vector<int> capacities(H_len, 5);
    vector<int> quantities(N_len, 1);
    vector<int> N(N_len,0);
@@ -117,20 +69,25 @@ int main(){
       }
    }
 
-
+   auto start = get_time::now();
    LowerBound lb = lower_bound_(H, capacities, N, quantities, distance_dict, mu, lamb);
    cout<<lb.z_lb<<endl;
-
-   int Delta = 10;
+   auto end = get_time::now();
+   auto diff = end - start;
+   cout<<"Elapsed time is :  "<< chrono::duration_cast<ms>(diff).count()<<" ms "<<endl;
+   
+   /*
+   int Delta = 200;
    double gamma = 12;
    int h = H[0];
    int capacity = capacities[0];
    string direction = "left";
    vector<list<Path>> p = GENPATH(Delta, gamma, h, capacity, N, quantities, distance_dict, direction);
+   auto start = get_time::now();
    vector<list<Route>> r = GENROUTE(Delta, gamma, h, capacity, N, quantities, distance_dict);
-
-   //print_Paths(p);
-   print_Routes(r);
-
+   auto end = get_time::now();
+   auto diff = end - start;
+   cout<<"Elapsed time is :  "<< chrono::duration_cast<ms>(diff).count()<<" ms "<<endl;
+   */
    return 1;
 }

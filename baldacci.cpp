@@ -15,6 +15,63 @@ using GenPath = vector<list<Path>>;
 using GenRoute = vector<list<Route>>;
 
 bool compare_routes (Route i, Route j) { return (i.cost<j.cost); }
+void print_path(Path p){
+   cout<<"\t Path: ";
+   for (auto n:p.path){
+      cout<<n<<" ";
+   }
+   cout<<"Set: ";
+   for (auto n:p.nodes){
+      cout<<n<<" ";
+   }
+   cout<<"Cost: "<<p.cost<<" ";
+   cout<<"Load: "<<p.load<<" ";
+   cout<<"Lower Bound: "<<p.lower_bound<<" "<<endl;
+}
+
+void print_route(Route r){
+   cout<<"\t Route_l: ";
+   for (auto n:(r.path_l->path)){
+      cout<<n<<" ";
+   }
+   cout<<"\t Route_r: ";
+   for (auto n:(r.path_r->path)){
+      cout<<n<<" ";
+   }
+   cout<<"Set: ";
+   for (auto n:r.nodes){
+      cout<<n<<" ";
+   }
+   cout<<"Cost: "<<r.cost<<" ";
+   cout<<"Load: "<<r.load<<" ";
+   cout<<"Median: "<<r.median<<" "<<endl;
+}
+
+void print_Paths(vector<list<Path>> paths){
+   int i = 0;
+   for (auto end:paths){
+      cout<<"End Node: "<<i;
+      cout<<"Length: "<<end.size()<<endl;
+      i+=1;
+
+      for (auto p:end){
+         print_path(p);
+      }
+   }
+}
+
+void print_Routes(vector<list<Route>> routes){
+   int i = 0;
+   for (auto end:routes){
+      cout<<"End Node: "<<i;
+      cout<<"Length: "<<end.size()<<endl;
+      i+=1;
+
+      for (auto r:end){
+         print_route(r);
+      }
+   }
+}
 
 vector<list<Path>> GENPATH(
    int Delta,
@@ -124,7 +181,7 @@ vector<list<Path>> GENPATH(
             // Delete dominated elements
             while (p!=T[i].end()){
                if ((p->end == new_path.end) && (p->cost > new_path.cost) && (p->nodes == new_path.nodes)){
-                  T[i].erase(p);
+                  p=T[i].erase(p);
                } else {
                   ++p;
                }
@@ -170,14 +227,12 @@ GenRoute GENROUTE(
          added[i].insert(std::make_tuple(0, 0));
       }
    }
-
    // Define infinity
    double inf = numeric_limits<double>::infinity();
    int iterations = 0;
    while(true){
-      if (iterations>0)
-         break;
       ++iterations;
+      cout<<iterations<<endl;
       // Check the route with the smallest cost
       int arg_min = -1;
       double cost_min = inf;
@@ -207,14 +262,15 @@ GenRoute GENROUTE(
       int total_load = load_l + load_r - quantities[arg_min];
       r_star.load = total_load;
 
-
+      //Fill the median
+      r_star.median = arg_min;
       bool valid = true;
       if (total_load > capacity){
          // Check if violate capacity
          valid = false;
-      } else if (((double) load_l < (double)total_load/2.0) or
-                  ((double) load_r < (double)total_load/2.0) or
-                  ((double) load_l > (double)total_load/2.0 +(double) quantities[arg_min]) or
+      } else if (((double) load_l < (double)total_load/2.0) ||
+                  ((double) load_r < (double)total_load/2.0) ||
+                  ((double) load_l > (double)total_load/2.0 +(double) quantities[arg_min]) ||
                   ((double) load_r > (double)total_load/2.0 +(double) quantities[arg_min])){
          // Check if violate median
          valid = false;
@@ -263,6 +319,7 @@ GenRoute GENROUTE(
             n_route.index_l = r_star.index_l + 1;
             n_route.index_r = r_star.index_r;
             new_routes.push_back(n_route);
+	    added[arg_min].insert(std::make_tuple(n_route.index_l, n_route.index_r));
          }
       }
       if (r_star.index_r + 1 < (int)P_r[arg_min].size()){
@@ -274,6 +331,7 @@ GenRoute GENROUTE(
             n_route.index_r = r_star.index_r + 1;
             n_route.index_l = r_star.index_l;
             new_routes.push_back(n_route);
+            added[arg_min].insert(std::make_tuple(n_route.index_l, n_route.index_r));
          }
       }
       // Order by cost
@@ -282,7 +340,7 @@ GenRoute GENROUTE(
       int loc = 0;
       auto p = T[arg_min].begin();
       while (p!=T[arg_min].end()){
-         if (loc == 2)
+         if (loc == (int) new_routes.size())
             break;
          if ((p->cost)>new_routes[loc].cost){
             T[arg_min].insert(p,new_routes[loc]);
@@ -292,12 +350,14 @@ GenRoute GENROUTE(
          }
       }
       // Finish inserting
-      while (loc != 2){
+      while (loc != (int) new_routes.size()){
          T[arg_min].insert(p,new_routes[loc]);
          loc++;
       }
-
    }
+   
+   print_Routes(R);
+      
    return R;
 
 }
