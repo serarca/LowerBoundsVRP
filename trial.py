@@ -38,8 +38,32 @@ import cpp_lower_bounds
 #lower_bound.lower_bound()
 
 
+#lower_bound.optimize_lower_bound_c(100, 10, 0.1, H,capacities,N,quantities,vrp.distance)
 
-lower_bound.optimize_lower_bound_c(100, 10, 0.1, H,capacities,N,quantities,vrp.distance)
+#lower_bound.optimize_lower_bound(100, 10, 0.1, H,capacities,N,quantities,vrp.distance_dict)
 
+Delta = 10;
+gamma = 10;
+h = 'h_0'
+h_ = len(N);
+capacity = capacities[h]
+distance_mat = vrp.distance;
+direction = "left"
 
-lower_bound.optimize_lower_bound(100, 10, 0.1, H,capacities,N,quantities,vrp.distance_dict)
+path_c = lower_bound.GENPATH_c(Delta, gamma, h_, capacity, N, quantities, distance_mat, direction)
+path = lower_bound.GENPATH(Delta, gamma, h, capacity, N, quantities, vrp.distance_dict, direction)
+
+print(path_c)
+print(" ")
+#print(path)
+#print(path == path_c)
+
+route_c = lower_bound.GENROUTE_c(Delta, gamma, h_, capacity, N, quantities, distance_mat, distance_mat)
+route = lower_bound.GENROUTE(Delta, gamma, h, capacity, N, quantities, vrp.distance_dict)
+
+print("route_c")
+print(route_c)
+print(" ")
+print("route")
+print(route)
+print(route == route_c)

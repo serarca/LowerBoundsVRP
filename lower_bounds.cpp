@@ -8,9 +8,28 @@
 #include "lower_bounds.h"
 #include <algorithm>
 #include <numeric>
+#include <math.h>
+
 
 
 using namespace std;
+
+vector<vector<double>> reduced_cost_matrix(
+   vector<vector<double>> geo_distance,
+   vector<double> lamb,
+   vector<double> mu
+){
+   vector<double> penalties;
+   penalties.reserve( lamb.size() + mu.size() ); // preallocate memory
+   penalties.insert( penalties.end(), lamb.begin(), lamb.end() );
+   penalties.insert( penalties.end(), mu.begin(), mu.end() );
+   for (int i = 0; i < (int) geo_distance.size(); i++){
+      for (int j = 0; j < (int) geo_distance.size(); j++){
+         geo_distance[i][j] -= (penalties[i]/2.0 + penalties[j]/2.0);
+      }
+   }
+   return geo_distance;
+}
 
 PossibleValues possible_values(vector<int>& quantities, int truck_capacity){
    vector<int> values(truck_capacity);
@@ -90,8 +109,6 @@ LowerBound lower_bound_(
       b_min_routes[n] = b_routes[n][h_m];
       val_min[n] = val[n][h_m];
       h_min[n] = h_m;
-
-
    }
 
    //Calculate number of visits to each node
@@ -363,4 +380,131 @@ QRoutes construct_q_routes_(
    qroutes.psi_route = psi_route;
 
    return qroutes;
+}
+
+// Given a set of routes, calculate the best lower bounds that they generate
+// We initialize at mu and lamb
+DualSolution lower_bound_optimizer_M1(
+   int iterations,
+   double z_ub,
+   double epsilon,
+   vector<int> H,
+   vector<int> capacities,
+   vector<int> N,
+   vector<int> quantities,
+   vector<vector<double>> geo_distance)
+{
+
+   //Calculate lengths
+   int len_N = N.size();
+   int len_H = H.size();
+   // Define infinity
+   double infinity = numeric_limits<double>::infinity();
+   // Define u
+   vector<double> u(len_N);
+
+   // Initialize mu and lambda
+   vector<double> lamb(len_N, 0);
+   vector<double> mu(len_H, 0);
+
+   // Vectors to store the optimal values
+   vector<double> lamb_opt(len_N);
+   vector<double> u_opt(len_N);
+   vector<double> v_opt(len_H);
+   // Here we store the values of the iterations
+   vector<double> values;
+   double max_val = -infinity;
+
+   for (int iteration = 0; iteration<iterations; iteration++){
+      vector<vector<double>> distance_dict = reduced_cost_matrix(geo_distance, lamb, mu);
+      // We pass these routes to the algorithm that calculates the lower bound
+      LowerBound lb = lower_bound_(H, capacities, N, quantities, distance_dict, mu,lamb);
+
+      // Check if the lower bound that we get improves
+      if (lb.z_lb > max_val){
+         max_val = lb.z_lb;
+         u_opt = lb.u;
+         v_opt = mu;
+         lamb_opt = lamb;
+      }
+      cout<<lb.z_lb<<endl;
+      values.push_back(lb.z_lb);
+
+      // We calculate g for the step of the algorithm
+      double g_den_1 = 0;
+      double g_den_2 = 0;
+      for (int i = 0; i< len_N; i++){
+         g_den_1 += pow(lb.theta[i]-1.0,2);
+      }
+      for (int i = 0; i< len_H; i++){
+         g_den_2 += pow(lb.rho[i]-1.0,2);
+      }
+      double g = (z_ub - lb.z_lb)/(g_den_1 + g_den_2);
+      // Update lambda and mu
+      for (int i = 0; i<len_N; i++){
+         lamb[i] = lamb[i] - epsilon*g*(lb.theta[i]-1.0);
+      }
+      for (int i = 0; i<len_H; i++){
+         mu[i] = min(mu[i] - epsilon*g*(lb.rho[i]-1.0),0.0);
+      }
+
+      // Check that we are not getting exploting reduced variables
+      double explotion = 0;
+      for (int i = 0; i< len_N; i++){
+         explotion+=fabs(lamb[i]);
+      }
+      if (explotion > pow(10,16)){
+         cout<<"Diverging reduced variables"<<endl;
+         break;
+      }
+
+      // We update epsilon
+      if ((int) values.size() >= 7){
+         // Calculate changes
+         vector<double> grad;
+         for (int i = 0; i < (int)values.size()-1; i++){
+            grad.push_back(values[i+1] - values[i]);
+         }
+         // Calculate jumps
+         vector<int> jumps;
+         for (int i = 0; i < (int)grad.size()-1; i++){
+            jumps.push_back(signbit(grad[i+1])!=signbit(grad[i]));
+         }
+         // If too many jumps reduce epsilon
+         int n_jumps = 0;
+         for (int i = (int)jumps.size()-5; i<(int)jumps.size(); i++ ){
+            n_jumps += jumps[i];
+         }
+         if (n_jumps >= 3){
+            epsilon = epsilon/1.5;
+            cout<<"New epsilon "<<epsilon<<endl;
+            values.clear();
+         }
+      }
+      // Check if we have reached a zero gradient
+      bool zero_gradient = true;
+      for (int i = 0; i < len_N; i++){
+         if (lb.theta[i] != 1.0){
+            zero_gradient = false;
+            break;
+         }
+      }
+      for (int i = 0; i < len_H; i++){
+         if (lb.rho[i] != 1.0){
+            zero_gradient = false;
+            break;
+         }
+      }
+      if (zero_gradient){
+         cout<<"Reached zero gradient"<<endl;
+         break;
+      }
+   }
+
+   DualSolution new_bound;
+   new_bound.z_lb = max_val;
+   new_bound.u = u_opt;
+   new_bound.v = v_opt;
+   new_bound.lamb = lamb_opt;
+   return new_bound;
 }

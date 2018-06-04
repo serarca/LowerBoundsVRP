@@ -1,3 +1,6 @@
+#pragma once
+
+
 #include <vector>
 #include <map>
 #include <string>
@@ -28,11 +31,24 @@ struct LowerBound {
    vector<double> u;
 };
 
+struct DualSolution {
+   double z_lb;
+   vector<double> lamb;
+   vector<double> u;
+   vector<double> v;
+};
+
 // A struct with posible values and their inverse maps
 struct PossibleValues {
    vector<int> values;
    map<int,int> values_pos;
 };
+
+vector<vector<double>> reduced_cost_matrix(
+   vector<vector<double>> geo_distance,
+   vector<double> lamb,
+   vector<double> mu
+);
 
 PossibleValues possible_values(vector<int>& quantities, int truck_capacity);
 
@@ -66,3 +82,13 @@ QRoutes construct_q_routes_(
    map<int,int> values_pos,
    vector<int> quantities
 );
+
+DualSolution lower_bound_optimizer_M1(
+   int iterations,
+   double z_ub,
+   double epsilon,
+   vector<int> H,
+   vector<int> capacities,
+   vector<int> N,
+   vector<int> quantities,
+   vector<vector<double>> geo_distance);
