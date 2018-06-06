@@ -28,6 +28,7 @@ cdef extern from "lower_bounds.h":
       vector[double] lamb
       vector[double] u
       vector[double] v
+      vector[list[SimpleRoute]] routes
 
    QPaths construct_q_paths_(
       int h,
@@ -110,6 +111,25 @@ cdef extern from "baldacci.h":
       vector[vector[double]] geo_distance
       )
 
+   DualSolution construct_lower_bound(
+      int iterations_grad_m1,
+      int iterations_grad_m2,
+      int iterations_m2,
+      double z_ub,
+      int Delta,
+      int Delta_zero,
+      int Delta_final,
+      double gamma,
+      double gamma_zero,
+      double gamma_final,
+      double epsilon,
+      vector[int] H,
+      vector[int] capacities,
+      vector[int] N,
+      vector[int] quantities,
+      vector[vector[double]] geo_distance
+   )
+
 cpdef construct_q_paths(h_,truck_capacity_,N_,distance_,values_,values_pos_,quantities_,direction_):
     cdef:
         int h = h_
@@ -186,4 +206,25 @@ cpdef lower_bound_optimizer_M1_(iterations_, z_ub_, epsilon_, H_, capacities_, N
       vector[int] quantities = quantities_
       vector[vector[double]] geo_distance = geo_distance_
    cdef DualSolution dual_solution = lower_bound_optimizer_M1(iterations, z_ub, epsilon, H, capacities, N, quantities, geo_distance)
+   return dual_solution
+
+cpdef construct_lower_bound_(iterations_grad_m1_,iterations_grad_m2_,iterations_m2_,z_ub_,Delta_,Delta_zero_,Delta_final_,gamma_,gamma_zero_,gamma_final_,epsilon_,H_,capacities_,N_,quantities_,geo_distance_):
+   cdef:
+      int iterations_grad_m1 = iterations_grad_m1_
+      int iterations_grad_m2 = iterations_grad_m2_
+      int iterations_m2 = iterations_m2_
+      double z_ub = z_ub_
+      int Delta = Delta_
+      int Delta_zero = Delta_zero_
+      int Delta_final = Delta_final_
+      double gamma = gamma_
+      double gamma_zero = gamma_zero_
+      double gamma_final = gamma_final_
+      double epsilon = epsilon_
+      vector[int] H = H_
+      vector[int] capacities = capacities_
+      vector[int] N = N_
+      vector[int] quantities = quantities_
+      vector[vector[double]] geo_distance = geo_distance_
+   cdef DualSolution dual_solution = construct_lower_bound(iterations_grad_m1,iterations_grad_m2,iterations_m2,z_ub,Delta,Delta_zero,Delta_final,gamma,gamma_zero,gamma_final,epsilon,H,capacities,N,quantities,geo_distance)
    return dual_solution

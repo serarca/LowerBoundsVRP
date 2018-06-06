@@ -6,6 +6,7 @@
 #include <iostream>
 #include <list>
 #include <set>
+#include "lower_bounds.h"
 
 using namespace std;
 
@@ -31,17 +32,6 @@ struct Route{
    int median;
 };
 
-//The struct of paths
-struct SimpleRoute{
-   list<int> path;
-   int index_l;
-   int index_r;
-   double cost;
-   int load;
-   int median;
-   double geo_cost;
-   int truck;
-};
 
 
 
@@ -65,7 +55,7 @@ list<SimpleRoute> GENROUTE(
    vector<vector<double>> distance_dict,
    vector<vector<double>> geo_distance);
 
-void optimize_lower_bound(
+DualSolution optimize_lower_bound_M2(
    int sub_iterations,
    double z_ub,
    int Delta,
@@ -80,4 +70,23 @@ void optimize_lower_bound(
    vector<vector<double>> geo_distance,
    vector<double> mu,
    vector<double> lamb
+);
+
+DualSolution construct_lower_bound(
+   int iterations_grad_m1,
+   int iterations_grad_m2,
+   int iterations_m2,
+   double z_ub,
+   int Delta,
+   int Delta_zero,
+   int Delta_final,
+   double gamma,
+   double gamma_zero,
+   double gamma_final,
+   double epsilon,
+   vector<int> H,
+   vector<int> capacities,
+   vector<int> N,
+   vector<int> quantities,
+   vector<vector<double>> geo_distance
 );

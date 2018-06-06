@@ -30,7 +30,7 @@ def possible_values(quantities, maximum):
     return possible_values
 
 # Generates a dictionary of reduced costs given a distance, a lambda vector
-def st_dict(lamb, distance_dictionary, N):
+def reduced_cost_dict(lamb, distance_dictionary, N):
     distance = copy.deepcopy(distance_dictionary)
     for k1 in distance.keys():
         for k2 in distance[k1].keys():
@@ -38,6 +38,21 @@ def st_dict(lamb, distance_dictionary, N):
                 distance[k1][k2] = distance[k1][k2] - 1.0/2*lamb[k1]
             if k2 in N:
                 distance[k1][k2] = distance[k1][k2] - 1.0/2*lamb[k2]
+    return distance
+
+# Generates a dictionary of reduced costs given a distance, a lambda vector
+def reduced_cost_dict_complete(lamb, mu, distance_dictionary, N, H):
+    distance = copy.deepcopy(distance_dictionary)
+    for k1 in distance.keys():
+        for k2 in distance[k1].keys():
+            if k1 in N:
+                distance[k1][k2] = distance[k1][k2] - 1.0/2*lamb[k1]
+            elif k1 in H:
+                distance[k1][k2] = distance[k1][k2] - 1.0/2*mu[k1]
+            if k2 in N:
+                distance[k1][k2] = distance[k1][k2] - 1.0/2*lamb[k2]
+            elif k2 in H:
+                distance[k1][k2] = distance[k1][k2] - 1.0/2*mu[k2]
     return distance
 
 # Generates a matrix of reduced costs given a distance and a lambda vector
@@ -399,59 +414,17 @@ def optimize_lower_bound(iterations, z_ub, epsilon, H,capacities,N,quantities,di
     return (max_val,u_opt,v_opt,lamb_opt)
 
 def optimize_lower_bound_c(iterations, z_ub, epsilon, H,capacities,N,quantities,distance_mat):
-
-    # Initialize the parameters
-    mu_ = np.zeros(len(H), dtype = "float64")
-    lamb_ = np.zeros(len(N), dtype = "float64")
-    max_val = -float('inf')
-    values = []
-
     H_ = (np.array(range(len(H)))+len(N)).astype(int)
     N_ = np.array(range(len(N))).astype(int)
     capacities_ = np.array([capacities[h] for h in H]).astype(int)
     quantities_ = np.array([quantities[n] for n in N]).astype(int)
+    geo_distance_ = distance_mat.astype("float64")
+    result = cpp_lower_bounds.lower_bound_optimizer_M1_(iterations, z_ub, epsilon, H_, capacities_, N_, quantities_, geo_distance_)
 
-    for i in range(iterations):
-        distance_ = reduced_cost_mat(lamb_, distance_mat, N_)
-        results_c = cpp_lower_bounds.lower_bound(H_,capacities_,N_,quantities_,distance_,mu_,lamb_)
-        z_lb = results_c["z_lb"]
-        theta = np.array(results_c["theta"]).astype("float64")
-        rho = np.array(results_c["rho"]).astype("float64")
-        u = np.array(results_c["u"]).astype("float64")
-        print(z_lb)
-        values.append(z_lb)
-        if z_lb > max_val:
-            max_val = copy.deepcopy(z_lb)
-            u_opt = copy.deepcopy(u)
-            v_opt = copy.deepcopy(mu_)
-            lamb_opt = copy.deepcopy(lamb_)
-
-        # Compute the new parameters
-        gamma = (z_ub - z_lb)/(np.sum((theta-1)**2) + np.sum((rho-1)**2))
-        # New lambda
-        lamb_ = np.array(lamb_ - epsilon*gamma*(theta-1))
-        # New mu
-        mu_ = np.array(np.minimum(mu_ - epsilon*gamma*(rho-1),0)).astype('float64')
-
-        if np.sum(np.abs(lamb_)) > 10**16:
-            raise ValueError('Lambda exploding')
-
-        # Rule for updating epsilon
-        if len(values)>=7:
-            grad = [values[i+1]-values[i] for i in range(len(values)-1)]
-            jumps = [np.sign(grad[i+1])!=np.sign(grad[i]) for i in range(len(grad)-1)]
-            if np.sum(jumps[len(jumps)-5:len(jumps)])>=3:
-                epsilon = epsilon/1.5
-                print ('new epsilon:%f' % epsilon)
-                values = []
-            if np.sum(np.array(grad[len(grad)-5:len(grad)])>0) >= 5:
-
-                epsilon = epsilon*1.2
-                print ('new epsilon:%f' % epsilon)
-                values = []
-        if (np.array_equal(theta, np.ones(len(N_))) and np.array_equal(rho, np.ones(len(H_)))):
-            print("reached zero gradient")
-            return (max_val,u_opt,v_opt,lamb_opt)
+    max_val = result["z_lb"]
+    u_opt = result["u"]
+    v_opt = result["v"]
+    lamb_opt = result["lamb"]
 
     return (max_val,u_opt,v_opt,lamb_opt)
 
@@ -680,3 +653,172 @@ def GENROUTE_c(Delta, gamma, h, capacity, N, quantities, distance_mat, geo_dista
         #    path['path'][j] = 'n_'+str(f) if (f<len(N)) else 'h_'+str(f-len(N))
 
     return results
+
+def lower_bound_M2(Routes, H,capacities,N,quantities,distance,mu,lamb,geo_distance):
+
+    # Given the routes, calculate the dual variables
+    b = {}
+    b_route = {}
+    for h in H:
+        b[h] = {}
+        b_route[h] = {}
+        for n in N:
+            b[h][n] = float('inf')
+            b_route[h][n] = []
+
+    for h in H:
+        for n in Routes[h].keys():
+            for r in Routes[h][n]:
+                nodes = r['path'][1:(len(r['path'])-1)]
+                cost_r = 0
+                for i in range(len(r['path'])-1):
+                    cost_r += distance[r['path'][i]][r['path'][i+1]]
+                for node in nodes:
+                    new_b = (cost_r-mu[h])/r['load']*quantities[node]
+                    if new_b<b[h][node]:
+                        b[h][node] = new_b
+                        b_route[h][node] = r
+
+    min_b = {}
+    min_b_route = {}
+    for n in N:
+        min_b[n] = float('inf')
+        min_b_route[n] = {}
+        for h in H:
+            if b[h][n]<min_b[n]:
+                min_b[n] = b[h][n]
+                min_b_route[n] = {'path':b_route[h][n]['path'], 'truck':h, 'load': b_route[h][n]['load']}
+
+    # Construct the update vectors
+    rho = {}
+    for h in H:
+        rho[h] = 0
+    for n in N:
+        route = min_b_route[n]
+        rho[route['truck']] += (quantities[n]+0.0)/route['load']
+
+    theta = {}
+    for n in N:
+        theta[n] = 0
+    for n in N:
+        route = min_b_route[n]
+        for v in route['path']:
+            if v in N:
+                theta[v] += (quantities[n]+0.0)/route['load']
+
+    # Construct the duality vectors
+    u = {}
+    for n in N:
+        u[n] = min_b[n] + lamb[n]
+
+    z_lb = np.sum([u[n] for n in N]) + np.sum([mu[h] for h in H])
+
+    # Update the costs of the routes
+    for h in H:
+        for n in Routes[h].keys():
+            for r in Routes[h][n]:
+                nodes = r['path'][1:(len(r['path'])-1)]
+                geo_cost = 0
+                u_cost = 0
+                for i in range(len(r['path'])-1):
+                    geo_cost += geo_distance[r['path'][i]][r['path'][i+1]]
+                for node in nodes:
+                    u_cost += u[node]
+                r['reduced_cost'] = geo_cost - u_cost - mu[h]
+                r['geo_cost'] = geo_cost
+
+    return (z_lb, theta, rho, u)
+
+def maximize_lower_bound_M2(Routes, lamb, mu, geo_distance, z_ub, iterations, epsilon,N,H, capacities, quantities):
+    max_val = -float('inf')
+    values = []
+
+    for i in range(iterations):
+        distance = reduced_cost_dict(lamb, geo_distance,N)
+
+        z_lb, theta, rho, u = lower_bound_M2(Routes, H,capacities,N,quantities,distance,mu,lamb,geo_distance)
+        values.append(z_lb)
+        if z_lb > max_val:
+            max_val = copy.deepcopy(z_lb)
+            u_opt = copy.deepcopy(u)
+            v_opt = copy.deepcopy(mu)
+            lamb_opt = copy.deepcopy(lamb)
+
+        # Compute the new parameters
+        gamma = (z_ub - z_lb)/(np.sum((np.array(theta.values())-1)**2) + np.sum((np.array(rho.values())-1)**2))
+        # New lambda
+        for j in N:
+            lamb[j] = lamb[j] - epsilon*gamma*(theta[j]-1)
+        for h in H:
+            mu[h] = np.min([mu[h] - epsilon*gamma*(rho[h]-1),0])
+        print(z_lb)
+
+        if np.sum(np.abs(lamb.values())) > 10**16:
+            raise ValueError('Lambda exploding')
+
+        # Rule for updating epsilon
+        if len(values)>=7:
+            grad = [values[i+1]-values[i] for i in range(len(values)-1)]
+            jumps = [np.sign(grad[i+1])!=np.sign(grad[i]) for i in range(len(grad)-1)]
+            if np.sum(jumps[len(jumps)-5:len(jumps)])>=3:
+                epsilon = epsilon/1.5
+                print ('new epsilon:%f' % epsilon)
+                values = []
+            if np.sum(np.array(grad[len(grad)-5:len(grad)])>0) >= 5:
+
+                epsilon = epsilon*1.2
+                print ('new epsilon:%f' % epsilon)
+                values = []
+        if (np.array_equal(np.array(theta.values()), np.ones(len(N))) and np.array_equal(np.array(rho.values()), np.ones(len(H)))):
+            print("reached zero gradient")
+            return (max_val,u_opt,v_opt,lamb_opt)
+
+    return (max_val,u_opt,v_opt,lamb_opt)
+
+def lower_bound_optimizer_M2_c(sub_iterations, z_ub, Delta, Delta_zero, gamma, gamma_zero, epsilon, H, capacities, N, quantities, geo_distance, mu, lamb):
+
+    H_ = (np.array(range(len(H)))+len(N)).astype(int)
+    N_ = np.array(range(len(N))).astype(int)
+    capacities_ = np.array([capacities[h] for h in H]).astype(int)
+    quantities_ = np.array([quantities[n] for n in N]).astype(int)
+    geo_distance_ = geo_distance.astype("float64")
+    mu_ = np.array([mu[h] for h in H])
+    lamb_ = np.array([lamb[n] for n in N])
+
+    result = cpp_lower_bounds.optimize_lower_bound_M2_(sub_iterations, z_ub, Delta, Delta_zero, gamma, gamma_zero, epsilon, H_, capacities_, N_, quantities_, geo_distance_, mu_, lamb_)
+
+    max_val = result["z_lb"]
+    u_opt = result["u"]
+    v_opt = result["v"]
+    lamb_opt = result["lamb"]
+
+    return (max_val,u_opt,v_opt,lamb_opt)
+
+def lower_bound_optimizer_M2(sub_iterations, z_ub, Delta, Delta_zero, gamma, gamma_zero, epsilon, H, capacities, N, quantities, geo_distance, mu, lamb):
+
+    reduced_distance = reduced_cost_dict_complete(lamb, mu, geo_distance,N,H)
+    # Calculate the routes of minimum cost
+    Routes = {}
+    for h in H:
+        Routes[h] = GENROUTE(Delta, gamma, h, capacities[h], N, quantities, reduced_distance)
+
+    max_val,u_opt,v_opt,lamb_opt = maximize_lower_bound_M2(Routes, lamb, mu, geo_distance, z_ub, sub_iterations, epsilon, N,H, capacities, quantities)
+
+    return (max_val,u_opt,v_opt,lamb_opt)
+
+def construct_lower_bound_c(iterations_grad_m1,iterations_grad_m2,iterations_m2,z_ub,Delta,Delta_zero,Delta_final,gamma,gamma_zero,gamma_final,epsilon,H,capacities,N,quantities,geo_distance):
+    H_ = (np.array(range(len(H)))+len(N)).astype(int)
+    N_ = np.array(range(len(N))).astype(int)
+    capacities_ = np.array([capacities[h] for h in H]).astype(int)
+    quantities_ = np.array([quantities[n] for n in N]).astype(int)
+    geo_distance_ = geo_distance.astype("float64")
+
+    result = cpp_lower_bounds.construct_lower_bound_(iterations_grad_m1,iterations_grad_m2,iterations_m2,z_ub,Delta,Delta_zero,Delta_final,gamma,gamma_zero,gamma_final,epsilon,H_,capacities_,N_,quantities_,geo_distance_)
+    max_val = result["z_lb"]
+    u_opt = result["u"]
+    v_opt = result["v"]
+    lamb_opt = result["lamb"]
+    routes = result["routes"]
+
+
+    return (max_val,u_opt,v_opt,lamb_opt, routes)

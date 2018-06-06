@@ -5,6 +5,8 @@
 #include <map>
 #include <string>
 #include <iostream>
+#include <list>
+
 
 using namespace std;
 
@@ -31,11 +33,25 @@ struct LowerBound {
    vector<double> u;
 };
 
+//The struct of paths
+struct SimpleRoute{
+   list<int> path;
+   int index_l;
+   int index_r;
+   double cost;
+   int load;
+   int median;
+   double geo_cost;
+   int truck;
+};
+
+
 struct DualSolution {
    double z_lb;
    vector<double> lamb;
    vector<double> u;
    vector<double> v;
+   vector<list<SimpleRoute>> routes;
 };
 
 // A struct with posible values and their inverse maps

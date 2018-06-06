@@ -1,3 +1,4 @@
+
 #include <vector>
 #include <map>
 #include <string>
@@ -20,120 +21,12 @@ using get_time = chrono::steady_clock ;
 #include "prettyprint.hpp"
 
 
-void print_set(set<tuple<int,int>> s){
-   for (auto n:s)
-      cout<<"("<<get<0>(n)<<","<<get<1>(n)<<")";
-   cout<<endl;
-}
-
-void print_path(Path p){
-   cout<<"\t Path: ";
-   for (auto n:p.path){
-      cout<<n<<" ";
-   }
-   cout<<"Set: ";
-   for (auto n:p.nodes){
-      cout<<n<<" ";
-   }
-   cout<<"Cost: "<<p.cost<<" ";
-   cout<<"Load: "<<p.load<<" ";
-   cout<<"Lower Bound: "<<p.lower_bound<<" "<<endl;
-}
-
-void print_route(Route r){
-   cout<<"\t Route_l: ";
-   for (auto n:(r.path_l->path)){
-      cout<<n<<" ";
-   }
-   cout<<"\t Route_r: ";
-   for (auto n:(r.path_r->path)){
-      cout<<n<<" ";
-   }
-   cout<<"Set: ";
-   for (auto n:r.nodes){
-      cout<<n<<" ";
-   }
-   cout<<"Cost: "<<r.cost<<" ";
-   cout<<"Load: "<<r.load<<" ";
-   cout<<"Median: "<<r.median<<" "<<endl;
-}
-
-void print_sroute(SimpleRoute r){
-   cout<<"\t Route: ";
-   for (auto n:(r.path)){
-      cout<<n<<" ";
-   }
-   cout<<"Cost: "<<r.cost<<" ";
-   cout<<"Geo Cost: "<<r.geo_cost<<" ";
-   cout<<"Load: "<<r.load<<" ";
-   cout<<"Median: "<<r.median<<" "<<endl;
-}
-
-void print_Paths(vector<list<Path>> paths){
-   int i = 0;
-   for (auto end:paths){
-      cout<<"End Node: "<<i;
-      cout<<"Length: "<<end.size()<<endl;
-      i+=1;
-
-      for (auto p:end){
-         print_path(p);
-      }
-   }
-}
-
-void print_Routes(vector<list<Route>> routes){
-   int i = 0;
-   for (auto end:routes){
-      cout<<"End Node: "<<i;
-      cout<<"Length: "<<end.size()<<endl;
-      i+=1;
-
-      for (auto r:end){
-         print_route(r);
-      }
-   }
-}
-
-void print_sRoutes(list<SimpleRoute> end){
-      cout<<"Length: "<<end.size()<<endl;
-
-      for (auto r:end){
-         print_sroute(r);
-      }
-}
-
-void print_SRoutes(vector<list<SimpleRoute>> routes){
-   int i = 0;
-   for (auto end:routes){
-      cout<<"End Node: "<<i;
-      cout<<"Length: "<<end.size()<<endl;
-      i+=1;
-
-      for (auto r:end){
-         print_sroute(r);
-      }
-   }
-}
-
-void p_v(vector<double> vec){
-   cout<<vec<<endl;
-}
-
-void p_v_v(vector<vector<double>> vec){
-   for (int i = 0; i< (int)vec.size(); i++){
-      cout<<i<<":"<<vec[i]<<endl;
-   }
-
-}
-
-
 
 
 int main(){
 
-   int H_len = 3;
-   int N_len = 3;
+   int H_len = 2;
+   int N_len = 10;
    vector<int> capacities(H_len, 10);
    vector<int> quantities(N_len, 1);
    vector<int> N(N_len,0);
@@ -190,58 +83,96 @@ int main(){
    cout<<"Elapsed time is :  "<< chrono::duration_cast<ms>(diff).count()<<" ms "<<endl;
    print_SRoutes(r);
    */
-
+   /*
    // Debugging first lower bounds
    double z_ub = 20;
    int iterations = 100;
    double epsilon = 0.1;
    DualSolution sol = lower_bound_optimizer_M1(iterations, z_ub, epsilon, H, capacities, N, quantities,geo_distance);
-
+   cout<<"Bound Christofides:"<<sol.z_lb<<endl;
+   sol.routes.clear();
 
 
    // Debugging the lower_bound_M2
-   int Delta = 1;
-   int Delta_zero = 10;
+   int Delta = 1000;
+   int Delta_zero = 1000;
    double gamma = 5;
    double gamma_zero = 5;
    int len_N = N.size();
    int len_H = H.size();
    int sub_iterations = 100;
+   int Delta_final = 1000;
+   double gamma_final = 5;
+
+   int iter_m2 = 5;
+   for (int iter_2 = 0; iter_2<iter_m2; iter_2++){
+      sol = optimize_lower_bound_M2(sub_iterations, z_ub, Delta, Delta_zero, gamma, gamma_zero, epsilon, H, capacities, N, quantities, geo_distance, sol.v, sol.lamb, sol.u, sol.routes);
+      cout<<"Bound M2:"<<sol.z_lb<<endl;
+   }
 
    // Define the vector of routes for each truck
-   vector<list<SimpleRoute>> Routes(len_H);
+   vector<list<SimpleRoute>> FinalRoutes(len_H);
 
    // Calculate reduced costs
-   vector<vector<double>> distance_dict = reduced_cost_matrix(geo_distance, sol.lamb, sol.v);
+   vector<vector<double>> distance_dict = reduced_cost_matrix(geo_distance, sol.u, sol.v);
 
    // We start by generating routes for all of the trucks
    for (auto h:H){
-      Routes[h - len_N] = GENROUTE(Delta, gamma, h, capacities[h - len_N], N, quantities, distance_dict, geo_distance);
+      FinalRoutes[h - len_N] = GENROUTE(Delta_final, gamma_final, h, capacities[h - len_N], N, quantities, distance_dict, geo_distance);
    }
 
-   while(true){
-      // We pass these routes to the algorithm that calculates the lower bound
-      DualSolution ds = lower_bound_optimizer_M2(sub_iterations, Routes, z_ub, epsilon, H, capacities, N, quantities, sol.v, sol.lamb);
-
-
-      vector<list<SimpleRoute>> newRoutes(len_H);
-      vector<vector<double>> new_distance_dict = reduced_cost_matrix(geo_distance, ds.lamb, ds.v);
-      int new_routes_count = 0;
-      for (auto h:H){
-         newRoutes[h - len_N] = GENROUTE(Delta_zero, gamma_zero, h, capacities[h - len_N], N, quantities, new_distance_dict, geo_distance);
-         for (auto route:newRoutes[h - len_N]){
-            if (route.cost < 0){
-               Routes[h - len_N].push_back(route);
-               ++new_routes_count;
+   // Now we add routes that come from a previous iteration of the algorithm
+   if (sol.routes.size()>0){
+      for (int i = 0; i< len_H; i++){
+         for (auto old_route:(sol.routes)[i]){
+            bool add = true;
+            for (auto new_route:FinalRoutes[i]){
+               if (new_route.path == old_route.path){
+                  add = false;
+                  break;
+               }
+            }
+            if (add){
+               FinalRoutes[i].push_back(old_route);
             }
          }
       }
-      cout<<"Negative routes: "<<new_routes_count<<endl;
-      if (new_routes_count == 0){
-         break;
-      }
-
    }
+   cout<<"Routes per truck"<<endl;
+   for (int i = 0; i< len_H; i++){
+      cout<<i+len_H<<":"<<FinalRoutes[i].size()<<endl;
+   }
+   */
+   int iterations_grad_m1 = 200;
+   int iterations_grad_m2 = 200;
+   int iterations_m2 = 3;
+   double z_ub = 20;
+   int Delta = 1000;
+   int Delta_zero = 1000;
+   int Delta_final = 1000;
+   double gamma = 5;
+   double gamma_zero = 5;
+   double gamma_final = 5;
+   double epsilon = 0.1;
+
+   DualSolution lb = construct_lower_bound(iterations_grad_m1,
+      iterations_grad_m2,
+      iterations_m2,
+      z_ub,
+      Delta,
+      Delta_zero,
+      Delta_final,
+      gamma,
+      gamma_zero,
+      gamma_final,
+      epsilon,
+      H,
+      capacities,
+      N,
+      quantities,
+      geo_distance
+   );
+
 
    return 1;
 }

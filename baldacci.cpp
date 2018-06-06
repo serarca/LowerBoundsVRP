@@ -18,6 +18,123 @@
 #include<cmath>
 #include "prettyprint.hpp"
 
+void print_set(set<tuple<int,int>> s){
+   for (auto n:s)
+      cout<<"("<<get<0>(n)<<","<<get<1>(n)<<")";
+   cout<<endl;
+}
+
+void print_path(Path p){
+   cout<<"\t Path: ";
+   for (auto n:p.path){
+      cout<<n<<" ";
+   }
+   cout<<"Set: ";
+   for (auto n:p.nodes){
+      cout<<n<<" ";
+   }
+   cout<<"Cost: "<<p.cost<<" ";
+   cout<<"Load: "<<p.load<<" ";
+   cout<<"Lower Bound: "<<p.lower_bound<<" "<<endl;
+}
+
+void print_route(Route r){
+   cout<<"\t Route_l: ";
+   for (auto n:(r.path_l->path)){
+      cout<<n<<" ";
+   }
+   cout<<"\t Route_r: ";
+   for (auto n:(r.path_r->path)){
+      cout<<n<<" ";
+   }
+   cout<<"Set: ";
+   for (auto n:r.nodes){
+      cout<<n<<" ";
+   }
+   cout<<"Cost: "<<r.cost<<" ";
+   cout<<"Load: "<<r.load<<" ";
+   cout<<"Median: "<<r.median<<" "<<endl;
+}
+
+void print_sroute(SimpleRoute r){
+   cout<<"\t Route: ";
+   for (auto n:(r.path)){
+      cout<<n<<" ";
+   }
+   cout<<"Cost: "<<r.cost<<" ";
+   cout<<"Geo Cost: "<<r.geo_cost<<" ";
+   cout<<"Load: "<<r.load<<" ";
+   cout<<"Median: "<<r.median<<" "<<endl;
+}
+
+void print_Paths(vector<list<Path>> paths){
+   int i = 0;
+   for (auto end:paths){
+      cout<<"End Node: "<<i;
+      cout<<"Length: "<<end.size()<<endl;
+      i+=1;
+
+      for (auto p:end){
+         print_path(p);
+      }
+   }
+}
+
+void print_paths(list<Path> end){
+
+      cout<<"Length: "<<end.size()<<endl;
+
+      for (auto p:end){
+         print_path(p);
+      }
+}
+
+void print_Routes(vector<list<Route>> routes){
+   int i = 0;
+   for (auto end:routes){
+      cout<<"End Node: "<<i;
+      cout<<"Length: "<<end.size()<<endl;
+      i+=1;
+
+      for (auto r:end){
+         print_route(r);
+      }
+   }
+}
+
+void print_sRoutes(list<SimpleRoute> end){
+      cout<<"Length: "<<end.size()<<endl;
+
+      for (auto r:end){
+         print_sroute(r);
+      }
+}
+
+void print_SRoutes(vector<list<SimpleRoute>> routes){
+   int i = 0;
+   for (auto end:routes){
+      cout<<"End Node: "<<i;
+      cout<<"Length: "<<end.size()<<endl;
+      i+=1;
+
+      for (auto r:end){
+         print_sroute(r);
+      }
+   }
+}
+
+void p_v(vector<double> vec){
+   cout<<vec<<endl;
+}
+
+void p_v_v(vector<vector<double>> vec){
+   for (int i = 0; i< (int)vec.size(); i++){
+      cout<<i<<":"<<vec[i]<<endl;
+   }
+
+}
+
+
 
 
 
@@ -143,6 +260,36 @@ vector<list<Path>> GENPATH(
       }
    }
 
+   // We add the one node paths if they are not added already, and we add them
+   // at the beginning
+   for (int i = 0; i < len_N; i++){
+      bool add = true;
+      Path new_path;
+      new_path.path.push_back(h);
+      new_path.path.push_back(i);
+      new_path.nodes.insert(i);
+      new_path.load = quantities[i];
+      new_path.end = N[i];
+      if (direction == "left"){
+         new_path.cost = distance_dict[h][i];
+         new_path.lower_bound = new_path.cost;
+      }
+      if (direction == "right"){
+         new_path.cost = distance_dict[i][h];
+         new_path.lower_bound = new_path.cost;
+      }
+      for (auto p:P[i]){
+         if (p.nodes == new_path.nodes){
+            add = false;
+            break;
+         }
+      }
+      if (add){
+         P[i].push_front(new_path);
+      }
+   }
+
+
    return P;
 }
 
@@ -160,6 +307,10 @@ list<SimpleRoute> GENROUTE(
 
    GenPath P_l = GENPATH(Delta, gamma, h, capacity, N, quantities, distance_dict, "left");
    GenPath P_r = GENPATH(Delta, gamma, h, capacity, N, quantities, distance_dict, "right");
+
+
+   //print_paths(P_l[len_N-1]);
+   //print_paths(P_r[len_N-1]);
 
    vector<list<Route>> T(len_N, list<Route>(0));
    vector<list<Route>> R(len_N, list<Route>(0));
@@ -310,6 +461,8 @@ list<SimpleRoute> GENROUTE(
    }
 
 
+
+
    // Take the routes and reconstruct them, since we do not want pointers to
    // iterators but the paths themselves
    std::list<SimpleRoute> SimpleRoutes;
@@ -346,6 +499,89 @@ list<SimpleRoute> GENROUTE(
       }
    }
 
+   // We are also going to add all of the paths in the GENPATH by simply adding
+   // the house node at the end. This avoids convergence problems found in the code
+   for (int i = 0; i < len_N; i++){
+      for (auto path:P_l[i]){
+         bool add = true;
+         SimpleRoute n_route;
+         for (auto it = path.path.begin(); it!=path.path.end(); it++){
+            n_route.path.push_back(*it);
+         }
+         n_route.path.push_back(h);
+         n_route.cost = path.cost + distance_dict[path.end][h];
+         n_route.index_r = -1;
+         n_route.index_l = -1;
+         n_route.load = path.load;
+         n_route.median = -1;
+         n_route.truck = h;
+         n_route.geo_cost = 0;
+         auto it1 = n_route.path.begin();
+         auto it2 = n_route.path.begin();
+         it2++;
+         while(it2!=n_route.path.end()){
+            n_route.geo_cost+=geo_distance[*it1][*it2];
+            it1++;
+            it2++;
+         }
+         if (n_route.cost < -pow(10,-12)){
+            // It is not necessary to check whether the route has been added or not, check later
+            for (auto sroute:SimpleRoutes){
+               if (sroute.path == n_route.path){
+                  print_sroute(sroute);
+                  add = false;
+                  cout<<"Warning, added route that already exists"<<endl;
+                  //throw "Warning, added route that already exists";
+                  break;
+               }
+            }
+            if (add){
+               SimpleRoutes.push_back(n_route);
+            }
+         }
+      }
+   }
+   for (int i = 0; i < len_N; i++){
+      for (auto path:P_r[i]){
+         bool add = true;
+         SimpleRoute n_route;
+         n_route.path.push_back(h);
+         for (auto it = path.path.rbegin(); it!=path.path.rend(); it++){
+            n_route.path.push_back(*it);
+         }
+         n_route.cost = path.cost + distance_dict[h][path.end];
+         n_route.index_r = -1;
+         n_route.index_l = -1;
+         n_route.load = path.load;
+         n_route.median = -1;
+         n_route.truck = h;
+         n_route.geo_cost = 0;
+         auto it1 = n_route.path.begin();
+         auto it2 = n_route.path.begin();
+         it2++;
+         while(it2!=n_route.path.end()){
+            n_route.geo_cost+=geo_distance[*it1][*it2];
+            it1++;
+            it2++;
+         }
+         if (n_route.cost < -pow(10,-12)){
+            // It is not necessary to check whether the route has been added or not, check later
+            for (auto sroute:SimpleRoutes){
+               if (sroute.path == n_route.path){
+                  add = false;
+                  cout<<"Warning, added route that already exists"<<endl;
+                  //throw "Warning, added route that already exists";
+                  break;
+               }
+            }
+            if (add){
+               SimpleRoutes.push_back(n_route);
+            }
+         }
+      }
+   }
+
+   // Add the simple route of h,n,h if there are no routes for a node n
    for (int i = 0; i < len_N; i++){
       if (R[i].size() == 0){
          SimpleRoute n_route;
@@ -372,7 +608,8 @@ list<SimpleRoute> GENROUTE(
       }
    }
 
-   // Calculate the geo_costs
+
+
 
 
    return SimpleRoutes;
@@ -542,7 +779,7 @@ DualSolution lower_bound_optimizer_M2(
          v_opt = mu;
          lamb_opt = lamb;
       }
-      cout<<lb.z_lb<<endl;
+      //cout<<lb.z_lb<<endl;
       //cout<<lamb<<endl;
       //cout<<mu<<endl;
       save_theta = lb.theta;
@@ -598,6 +835,15 @@ DualSolution lower_bound_optimizer_M2(
             cout<<"New epsilon "<<epsilon<<endl;
             values.clear();
          }
+         int n_increases = 0;
+         for (int i = (int)grad.size()-5; i<(int)grad.size(); i++ ){
+            n_increases += (int)(grad[i]>0);
+         }
+         if (n_increases >= 5){
+            epsilon = epsilon*1.2;
+            cout<<"New epsilon "<<epsilon<<endl;
+            values.clear();
+         }
       }
       // Check if we have reached a zero gradient
       double gradient_norm = 0;
@@ -624,7 +870,7 @@ DualSolution lower_bound_optimizer_M2(
 }
 
 
-void optimize_lower_bound(
+DualSolution optimize_lower_bound_M2(
    int sub_iterations,
    double z_ub,
    int Delta,
@@ -638,25 +884,41 @@ void optimize_lower_bound(
    vector<int> quantities,
    vector<vector<double>> geo_distance,
    vector<double> mu,
-   vector<double> lamb
+   vector<double> lamb,
+   vector<double> u,
+   vector<list<SimpleRoute>> initial_routes
 ){
    //Calculate lengths
    int len_N = N.size();
    int len_H = H.size();
-   // Define infinity
-   double infinity = numeric_limits<double>::infinity();
-   // Define u
-   vector<double> u(len_N);
 
    // Define the vector of routes for each truck
    vector<list<SimpleRoute>> Routes(len_H);
 
    // Calculate reduced costs
-   vector<vector<double>> distance_dict = reduced_cost_matrix(geo_distance, lamb, mu);
+   vector<vector<double>> distance_dict = reduced_cost_matrix(geo_distance, u, mu);
 
    // We start by generating routes for all of the trucks
    for (auto h:H){
       Routes[h - len_N] = GENROUTE(Delta, gamma, h, capacities[h - len_N], N, quantities, distance_dict, geo_distance);
+   }
+
+   // Now we add routes that come from a previous iteration of the algorithm
+   if (initial_routes.size()>0){
+      for (int i = 0; i< len_H; i++){
+         for (auto old_route:initial_routes[i]){
+            bool add = true;
+            for (auto new_route:Routes[i]){
+               if (new_route.path == old_route.path){
+                  add = false;
+                  break;
+               }
+            }
+            if (add){
+               Routes[i].push_back(old_route);
+            }
+         }
+      }
    }
    // Vectors to store the optimal values
    vector<double> lamb_opt(len_N);
@@ -664,25 +926,103 @@ void optimize_lower_bound(
    vector<double> v_opt(len_H);
    // Here we store the values of the iterations
    vector<double> values;
-
+   DualSolution ds;
    while(true){
       // We pass these routes to the algorithm that calculates the lower bound
-      DualSolution ds = lower_bound_optimizer_M2(sub_iterations, Routes, z_ub, epsilon, H, capacities, N, quantities, mu, lamb);
+      // Check not using the cost
+      ds = lower_bound_optimizer_M2(sub_iterations, Routes, z_ub, epsilon, H, capacities, N, quantities, mu, lamb);
       vector<list<SimpleRoute>> newRoutes(len_H);
-      vector<vector<double>> new_distance_dict = reduced_cost_matrix(geo_distance, ds.lamb, ds.v);
-      bool empty = true;
+      vector<vector<double>> new_distance_dict = reduced_cost_matrix(geo_distance, ds.u, ds.v);
+      int new_routes_count = 0;
       for (auto h:H){
+         // Check the cost is that of the reduced variables
          newRoutes[h - len_N] = GENROUTE(Delta_zero, gamma_zero, h, capacities[h - len_N], N, quantities, new_distance_dict, geo_distance);
          for (auto route:newRoutes[h - len_N]){
-            if (route.cost < 0){
+            if (route.cost < - pow(10,-12)){
                Routes[h - len_N].push_back(route);
-               empty = false;
+               print_sroute(route);
+               ++new_routes_count;
             }
          }
       }
-      if (empty){
+      cout<<"Routes per truck"<<endl;
+      for (int i = 0; i< len_H; i++){
+         cout<<i+len_H<<":"<<Routes[i].size()<<endl;
+      }
+      cout<<"Negative routes: "<<new_routes_count<<endl;
+      if (new_routes_count == 0){
          break;
       }
-
    }
+   ds.routes = Routes;
+   return ds;
+}
+
+DualSolution construct_lower_bound(
+   int iterations_grad_m1,
+   int iterations_grad_m2,
+   int iterations_m2,
+   double z_ub,
+   int Delta,
+   int Delta_zero,
+   int Delta_final,
+   double gamma,
+   double gamma_zero,
+   double gamma_final,
+   double epsilon,
+   vector<int> H,
+   vector<int> capacities,
+   vector<int> N,
+   vector<int> quantities,
+   vector<vector<double>> geo_distance
+){
+   // Debugging first lower bounds
+   DualSolution sol = lower_bound_optimizer_M1(iterations_grad_m1, z_ub, epsilon, H, capacities, N, quantities,geo_distance);
+   cout<<"Bound Christofides:"<<sol.z_lb<<endl;
+   sol.routes.clear();
+
+   int len_N = N.size();
+   int len_H = H.size();
+
+   for (int iter_2 = 0; iter_2<iterations_m2; iter_2++){
+      sol = optimize_lower_bound_M2(iterations_grad_m2, z_ub, Delta, Delta_zero, gamma, gamma_zero, epsilon, H, capacities, N, quantities, geo_distance, sol.v, sol.lamb, sol.u, sol.routes);
+      cout<<"Bound M2:"<<sol.z_lb<<endl;
+   }
+
+   // Define the vector of routes for each truck
+   vector<list<SimpleRoute>> FinalRoutes(len_H);
+
+   // Calculate reduced costs
+   vector<vector<double>> distance_dict = reduced_cost_matrix(geo_distance, sol.u, sol.v);
+
+   // We start by generating routes for all of the trucks
+   for (auto h:H){
+      FinalRoutes[h - len_N] = GENROUTE(Delta_final, gamma_final, h, capacities[h - len_N], N, quantities, distance_dict, geo_distance);
+   }
+
+   // Now we add routes that come from a previous iteration of the algorithm
+   if (sol.routes.size()>0){
+      for (int i = 0; i< len_H; i++){
+         for (auto old_route:(sol.routes)[i]){
+            bool add = true;
+            for (auto new_route:FinalRoutes[i]){
+               if (new_route.path == old_route.path){
+                  add = false;
+                  break;
+               }
+            }
+            if (add){
+               FinalRoutes[i].push_back(old_route);
+            }
+         }
+      }
+   }
+   cout<<"Routes per truck"<<endl;
+   for (int i = 0; i< len_H; i++){
+      cout<<i+len_N<<":"<<FinalRoutes[i].size()<<endl;
+   }
+
+   sol.routes = FinalRoutes;
+   cout<<"Done"<<endl;
+   return sol;
 }
