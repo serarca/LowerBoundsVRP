@@ -60,6 +60,14 @@ struct PossibleValues {
    map<int,int> values_pos;
 };
 
+struct LB_GENPATH {
+   vector<vector<double>> F;
+   vector<vector<double>> G;
+   vector<vector<int>> X;
+   vector<vector<vector<int>>> min_q_path;
+   vector<vector<vector<int>>> min_q_path_2;
+};
+
 vector<vector<double>> reduced_cost_matrix(
    vector<vector<double>> geo_distance,
    vector<double> lamb,
@@ -108,3 +116,14 @@ DualSolution lower_bound_optimizer_M1(
    vector<int> N,
    vector<int> quantities,
    vector<vector<double>> geo_distance);
+
+LB_GENPATH path_lower_bound(
+   int h,
+   int truck_capacity,
+   vector<int> N,
+   vector<vector<double>> distance_dict,
+   vector<int> values,
+   map<int,int> values_pos,
+   vector<int> quantities,
+   string direction
+);

@@ -25,8 +25,8 @@ using get_time = chrono::steady_clock ;
 
 int main(){
 
-   int H_len = 2;
-   int N_len = 10;
+   int H_len = 5;
+   int N_len = 40;
    vector<int> capacities(H_len, 10);
    vector<int> quantities(N_len, 1);
    vector<int> N(N_len,0);
@@ -144,14 +144,14 @@ int main(){
    }
    */
    int iterations_grad_m1 = 200;
-   int iterations_grad_m2 = 200;
+   int iterations_grad_m2 = 100;
    int iterations_m2 = 3;
    double z_ub = 20;
-   int Delta = 1000;
+   int Delta = 2000;
    int Delta_zero = 1000;
-   int Delta_final = 1000;
+   int Delta_final = 2000;
    double gamma = 5;
-   double gamma_zero = 5;
+   double gamma_zero = 0;
    double gamma_final = 5;
    double epsilon = 0.1;
 

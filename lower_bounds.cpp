@@ -12,6 +12,7 @@
 
 
 
+
 using namespace std;
 
 vector<vector<double>> reduced_cost_matrix(
@@ -279,6 +280,94 @@ QPaths construct_q_paths_(
 
 }
 
+// Constructs functions to calculate lower bounds of a path, that are used later
+// by the GENROUTE function
+LB_GENPATH path_lower_bound(
+   int h,
+   int truck_capacity,
+   vector<int> N,
+   vector<vector<double>> distance_dict,
+   vector<int> values,
+   map<int,int> values_pos,
+   vector<int> quantities,
+   string direction
+){
+   //Construct the qpaths
+   QPaths qpaths = construct_q_paths_(h, truck_capacity, N, distance_dict, values, values_pos, quantities, direction);
+
+   // Define infinity
+   double infinity = numeric_limits<double>::infinity();
+   int len_N = N.size();
+   int len_values = values.size();
+
+   // Initialize values
+   vector<vector<double>> F(len_values,vector<double>(len_N,infinity));
+   vector<vector<double>> G(len_values,vector<double>(len_N,infinity));
+   vector<vector<int>> X(len_values,vector<int>(len_N,-1));
+   vector<vector<vector<int>>> min_q_path(len_values,vector<vector<int>>(len_N));
+   vector<vector<vector<int>>> min_q_path_2(len_values,vector<vector<int>>(len_N));
+
+
+   // The F function takes as argument the farmer
+   for (int i = 0; i < len_N; i++){
+      int q_i = quantities[i];
+      int q_lb = values_pos[q_i];
+      int q_ub = values_pos[truck_capacity];
+      for (int pos_q = q_lb; pos_q <= q_ub; pos_q++){
+         int qp_lb = q_lb;
+         int qp_ub = values_pos[truck_capacity - values[pos_q] + q_i];
+         double min_F = infinity;
+         int arg_min_F = -1;
+         for (int qp = qp_lb; qp <= qp_ub; qp++){
+            if ((qpaths.f)[qp][i] < min_F){
+               min_F = (qpaths.f)[qp][i];
+               arg_min_F = qp;
+            }
+         }
+         F[pos_q][i] = min_F;
+         X[pos_q][i] = (qpaths.p)[arg_min_F][i];
+         min_q_path[pos_q][i] = (qpaths.q_route)[arg_min_F][i];
+         double min_G = infinity;
+         int arg_min_G = -1;
+         bool used_f = true;
+         //cout<<qp_lb<<","<<qp_ub<<endl;
+         for (int qp = qp_lb; qp <= qp_ub; qp++){
+            if (qpaths.p[qp][i] == X[pos_q][i]){
+               if ((qpaths.phi)[qp][i] <= min_G){
+                  min_G = (qpaths.phi)[qp][i];
+                  arg_min_G = qp;
+                  used_f = false;
+               }
+            } else {
+               if ((qpaths.f)[qp][i] <= min_G){
+                  min_G = (qpaths.f)[qp][i];
+                  arg_min_G = qp;
+                  used_f = true;
+               }
+            }
+         }
+         G[pos_q][i] = min_G;
+         if (used_f){
+            min_q_path_2[pos_q][i] = (qpaths.q_route)[arg_min_G][i];
+         } else {
+            min_q_path_2[pos_q][i] = (qpaths.q_route_2)[arg_min_G][i];
+         }
+
+      }
+
+   }
+
+   LB_GENPATH functions;
+   functions.F = F;
+   functions.X = X;
+   functions.G = G;
+   functions.min_q_path = min_q_path;
+   functions.min_q_path_2 = min_q_path_2;
+
+   return functions;
+
+}
+
 
 QRoutes construct_q_routes_(
    int h,
@@ -506,5 +595,7 @@ DualSolution lower_bound_optimizer_M1(
    new_bound.u = u_opt;
    new_bound.v = v_opt;
    new_bound.lamb = lamb_opt;
+
+
    return new_bound;
 }

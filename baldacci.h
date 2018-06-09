@@ -7,13 +7,17 @@
 #include <list>
 #include <set>
 #include "lower_bounds.h"
+#include <bitset>
 
 using namespace std;
+
+typedef std::bitset<100> bit_set;
+
 
 //The struct of paths
 struct Path{
    list<int> path;
-   set<int> nodes;
+   bit_set nodes;
    double cost;
    double lower_bound;
    int load;
@@ -26,7 +30,7 @@ struct Route{
    list<Path>::iterator path_r;
    int index_l;
    int index_r;
-   set<int> nodes;
+   bit_set nodes;
    double cost;
    int load;
    int median;
@@ -43,7 +47,9 @@ vector<list<Path>> GENPATH(
    vector<int> N,
    vector<int> quantities,
    vector<vector<double>> distance_dict,
-   string direction);
+   string direction,
+   bool &terminated
+);
 
 list<SimpleRoute> GENROUTE(
    int Delta,
@@ -53,7 +59,9 @@ list<SimpleRoute> GENROUTE(
    vector<int> N,
    vector<int> quantities,
    vector<vector<double>> distance_dict,
-   vector<vector<double>> geo_distance);
+   vector<vector<double>> geo_distance,
+   bool &terminated
+);
 
 DualSolution optimize_lower_bound_M2(
    int sub_iterations,

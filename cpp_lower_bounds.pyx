@@ -89,27 +89,6 @@ cdef extern from "baldacci.h":
       double geo_cost
       int truck
 
-   vector[list[Path]] GENPATH(
-      int Delta,
-      double gamma,
-      int h,
-      int capacity,
-      vector[int] N,
-      vector[int] quantities,
-      vector[vector[double]] distance_dict,
-      string direction
-      )
-
-   list[SimpleRoute] GENROUTE(
-      int Delta,
-      double gamma,
-      int h,
-      int capacity,
-      vector[int] N,
-      vector[int] quantities,
-      vector[vector[double]] distance_dict,
-      vector[vector[double]] geo_distance
-      )
 
    DualSolution construct_lower_bound(
       int iterations_grad_m1,
@@ -169,31 +148,6 @@ cpdef lower_bound(H_, capacities_, N_, quantities_, distance_, mu_, lamb_):
    cdef LowerBound lb = lower_bound_(H, capacities, N, quantities, distance, mu, lamb)
    return lb
 
-cpdef GENPATH_(Delta_, gamma_, h_, capacity_, N_, quantities_, distance_dict_, direction_):
-   cdef:
-      int Delta = Delta_
-      double gamma = gamma_
-      int h = h_
-      int capacity = capacity_
-      vector[int] N = N_
-      vector[int] quantities = quantities_
-      vector[vector[double]] distance_dict = distance_dict_
-      string direction = direction_
-   cdef vector[list[Path]] paths = GENPATH(Delta, gamma, h, capacity, N, quantities, distance_dict, direction)
-   return paths
-
-cpdef GENROUTE_(Delta_, gamma_, h_, capacity_, N_, quantities_, distance_dict_, geo_distance_):
-   cdef:
-      int Delta = Delta_
-      double gamma = gamma_
-      int h = h_
-      int capacity = capacity_
-      vector[int] N = N_
-      vector[int] quantities = quantities_
-      vector[vector[double]] distance_dict = distance_dict_
-      vector[vector[double]] geo_distance = geo_distance_
-   cdef list[SimpleRoute] routes = GENROUTE(Delta, gamma, h, capacity, N, quantities, distance_dict, geo_distance)
-   return routes
 
 cpdef lower_bound_optimizer_M1_(iterations_, z_ub_, epsilon_, H_, capacities_, N_, quantities_, geo_distance_):
    cdef:
