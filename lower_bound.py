@@ -12,6 +12,8 @@ import copy
 from copy import deepcopy
 import cpp_lower_bounds
 import ipdb
+from gurobipy import *
+
 
 
 def possible_values(quantities, maximum):
@@ -385,12 +387,15 @@ def optimize_lower_bound(iterations, z_ub, epsilon, H,capacities,N,quantities,di
 
         # Compute the new parameters
         gamma = (z_ub - z_lb)/(np.sum((np.array(theta.values())-1)**2) + np.sum((np.array(rho.values())-1)**2))
+        print(z_lb)
+        print(lamb)
+        print(mu)
         # New lambda
         for j in N:
             lamb[j] = lamb[j] - epsilon*gamma*(theta[j]-1)
         for h in H:
             mu[h] = np.min([mu[h] - epsilon*gamma*(rho[h]-1),0])
-        print(z_lb)
+
 
         if np.sum(np.abs(lamb.values())) > 10**16:
             raise ValueError('Lambda exploding')
@@ -814,11 +819,53 @@ def construct_lower_bound_c(iterations_grad_m1,iterations_grad_m2,iterations_m2,
     geo_distance_ = geo_distance.astype("float64")
 
     result = cpp_lower_bounds.construct_lower_bound_(iterations_grad_m1,iterations_grad_m2,iterations_m2,z_ub,Delta,Delta_zero,Delta_final,gamma,gamma_zero,gamma_final,epsilon,H_,capacities_,N_,quantities_,geo_distance_)
-    max_val = result["z_lb"]
-    u_opt = result["u"]
-    v_opt = result["v"]
-    lamb_opt = result["lamb"]
-    routes = result["routes"]
 
 
-    return (max_val,u_opt,v_opt,lamb_opt, routes)
+    return (result)
+
+def primal_solver(solution, len_N, H, quantities, capacities, time):
+    print("The lower bound is %f"%solution["z_lb"])
+    reduced_routes =[r for truck_routes in solution["routes"] for r in truck_routes]
+    print("There are %d total routes"%len(reduced_routes))
+    truck_routes={}
+    farmer_routes={}
+
+    for farmer in range(len_N):
+        farmer_routes[farmer] = [i for i,route in enumerate(reduced_routes) if farmer in route["path"]]
+        print(farmer)
+    for truck in range(len_N, len_N + len(H)):
+        truck_routes[truck] = [i for i,route in enumerate(reduced_routes) if truck==route["truck"]]
+        print(truck)
+    model = Model()
+    # Add variables to modes
+    variables = []
+    for i,route in enumerate(reduced_routes):
+        variables.append(model.addVar(obj=route['geo_cost'], vtype=GRB.BINARY,
+                                      name='route_'+str(i)))
+    model.update()
+    # Add farmer constraints
+    for farmer, routes in farmer_routes.iteritems():
+        model.addConstr(quicksum([variables[k] for k in routes])>=1)
+    ## Add route constraints
+    for truck, routes in truck_routes.iteritems():
+        model.addConstr(quicksum([variables[k] for k in routes])<=1)
+    model.update()
+    model.setParam('TimeLimit', time)
+    model.optimize()
+
+    ## Extract the optimal Routes
+    routes_chosen = []
+    for v in model.getVars():
+        name = v.VarName
+        value = v.x
+        if value == 1.0:
+            r_number = int(name.split('_')[1])
+            routes_chosen.append(reduced_routes[r_number])
+
+    # Format them
+    routes_formatted = {h:{"route":[], "load":0, "max_load":capacities[h]} for h in H}
+    for r in routes_chosen:
+        h = 'h_'+str(r["truck"] - len_N)
+        routes_formatted[h]["route"] = ['n_'+str(i) for i in r['path'][1:(len(r['path'])-1)]]
+        routes_formatted[h]["load"] = np.sum([quantities[n] for n in routes_formatted[h]["route"]])
+    return routes_formatted

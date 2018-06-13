@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <numeric>
 #include <math.h>
+#include "prettyprint.hpp"
 
 
 
@@ -83,7 +84,8 @@ LowerBound lower_bound_(
          vector<double> b_values(len_values);
 
          for (int l = 0; l < len_values; l++){
-            b_values[l] = (qroutes.psi[l][n] - mu[h]) * (double)quantities[n]/(double)possible.values[l];
+            //b_values[l] = (qroutes.psi[l][n] - mu[h]) * (double)quantities[n]/(double)possible.values[l];
+            b_values[l] = (qroutes.psi[l][n]) * (double)quantities[n]/(double)possible.values[l];
          }
 
          std::vector<double>::iterator l_it = std::min_element(b_values.begin(), b_values.end());
@@ -508,6 +510,9 @@ DualSolution lower_bound_optimizer_M1(
       vector<vector<double>> distance_dict = reduced_cost_matrix(geo_distance, lamb, mu);
       // We pass these routes to the algorithm that calculates the lower bound
       LowerBound lb = lower_bound_(H, capacities, N, quantities, distance_dict, mu,lamb);
+      cout<<lb.z_lb<<endl;
+      //cout<<lamb<<endl;
+      //cout<<mu<<endl;
 
       // Check if the lower bound that we get improves
       if (lb.z_lb > max_val){
@@ -516,7 +521,6 @@ DualSolution lower_bound_optimizer_M1(
          v_opt = mu;
          lamb_opt = lamb;
       }
-      cout<<lb.z_lb<<endl;
       values.push_back(lb.z_lb);
 
       // We calculate g for the step of the algorithm

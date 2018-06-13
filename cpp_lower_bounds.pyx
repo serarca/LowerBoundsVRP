@@ -29,6 +29,7 @@ cdef extern from "lower_bounds.h":
       vector[double] u
       vector[double] v
       vector[list[SimpleRoute]] routes
+      double gamma_guarantee
 
    QPaths construct_q_paths_(
       int h,
@@ -88,9 +89,11 @@ cdef extern from "baldacci.h":
       int median
       double geo_cost
       int truck
+      double l_lb
+      double r_lb
 
 
-   DualSolution construct_lower_bound(
+   vector[DualSolution] construct_lower_bound(
       int iterations_grad_m1,
       int iterations_grad_m2,
       int iterations_m2,
@@ -180,5 +183,5 @@ cpdef construct_lower_bound_(iterations_grad_m1_,iterations_grad_m2_,iterations_
       vector[int] N = N_
       vector[int] quantities = quantities_
       vector[vector[double]] geo_distance = geo_distance_
-   cdef DualSolution dual_solution = construct_lower_bound(iterations_grad_m1,iterations_grad_m2,iterations_m2,z_ub,Delta,Delta_zero,Delta_final,gamma,gamma_zero,gamma_final,epsilon,H,capacities,N,quantities,geo_distance)
+   cdef vector[DualSolution] dual_solution = construct_lower_bound(iterations_grad_m1,iterations_grad_m2,iterations_m2,z_ub,Delta,Delta_zero,Delta_final,gamma,gamma_zero,gamma_final,epsilon,H,capacities,N,quantities,geo_distance)
    return dual_solution

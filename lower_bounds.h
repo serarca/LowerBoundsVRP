@@ -43,6 +43,8 @@ struct SimpleRoute{
    int median;
    double geo_cost;
    int truck;
+   double l_lb;
+   double r_lb;
 };
 
 
@@ -52,6 +54,7 @@ struct DualSolution {
    vector<double> u;
    vector<double> v;
    vector<list<SimpleRoute>> routes;
+   double gamma_guarantee;
 };
 
 // A struct with posible values and their inverse maps

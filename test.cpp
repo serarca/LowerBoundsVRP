@@ -25,8 +25,8 @@ using get_time = chrono::steady_clock ;
 
 int main(){
 
-   int H_len = 5;
-   int N_len = 40;
+   int H_len = 2;
+   int N_len = 20;
    vector<int> capacities(H_len, 10);
    vector<int> quantities(N_len, 1);
    vector<int> N(N_len,0);
@@ -47,15 +47,22 @@ int main(){
    // First create an instance of an engine.
    random_device rnd_device;
    // Specify the engine and distribution.
-   mt19937 mersenne_engine(rnd_device());
-   mersenne_engine.seed(std::random_device()());
+   //mt19937 mersenne_engine(rnd_device());
+   string str = "a";
+   std::seed_seq seed1(str.begin(),str.end());
+   mt19937 mersenne_engine(seed1);
+   //mersenne_engine.seed(std::random_device()());
+   ///mersenne_engine.seed(0);
    uniform_real_distribution<double> dist(0, 1);
 
    auto gen = std::bind(dist, mersenne_engine);
    generate(begin(x), end(x), gen);
 
-   mersenne_engine.seed(std::random_device()());
-   auto gen2 = std::bind(dist, mersenne_engine);
+   //mersenne_engine.seed(std::random_device()());
+   str = "b";
+   std::seed_seq seed2(str.begin(),str.end());
+   mt19937 mersenne_engine_2(seed2);
+   auto gen2 = std::bind(dist, mersenne_engine_2);
    generate(begin(y), end(y), gen2);
 
 
@@ -147,15 +154,15 @@ int main(){
    int iterations_grad_m2 = 100;
    int iterations_m2 = 3;
    double z_ub = 20;
-   int Delta = 2000;
+   int Delta = 3000;
    int Delta_zero = 1000;
-   int Delta_final = 2000;
-   double gamma = 5;
-   double gamma_zero = 0;
-   double gamma_final = 5;
+   int Delta_final = 3000;
+   double gamma = 1;
+   double gamma_zero = - pow(10,-14);
+   double gamma_final = 1;
    double epsilon = 0.1;
 
-   DualSolution lb = construct_lower_bound(iterations_grad_m1,
+   vector<DualSolution> lb = construct_lower_bound(iterations_grad_m1,
       iterations_grad_m2,
       iterations_m2,
       z_ub,
@@ -172,6 +179,7 @@ int main(){
       quantities,
       geo_distance
    );
+   cout<<lb[0].routes.size()<<endl;
 
 
    return 1;

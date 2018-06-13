@@ -34,6 +34,8 @@ struct Route{
    double cost;
    int load;
    int median;
+   double l_lb;
+   double r_lb;
 };
 
 
@@ -48,7 +50,8 @@ vector<list<Path>> GENPATH(
    vector<int> quantities,
    vector<vector<double>> distance_dict,
    string direction,
-   bool &terminated
+   bool &terminated,
+   double &gamma_guarantee
 );
 
 list<SimpleRoute> GENROUTE(
@@ -60,7 +63,8 @@ list<SimpleRoute> GENROUTE(
    vector<int> quantities,
    vector<vector<double>> distance_dict,
    vector<vector<double>> geo_distance,
-   bool &terminated
+   bool &terminated,
+   double &gamma_guarantee
 );
 
 DualSolution optimize_lower_bound_M2(
@@ -77,10 +81,13 @@ DualSolution optimize_lower_bound_M2(
    vector<int> quantities,
    vector<vector<double>> geo_distance,
    vector<double> mu,
-   vector<double> lamb
+   vector<double> lamb,
+   vector<double> u,
+   vector<list<SimpleRoute>> &initial_routes,
+   double &initial_gamma_guarantee
 );
 
-DualSolution construct_lower_bound(
+vector<DualSolution> construct_lower_bound(
    int iterations_grad_m1,
    int iterations_grad_m2,
    int iterations_m2,
