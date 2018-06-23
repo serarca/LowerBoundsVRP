@@ -1187,6 +1187,7 @@ vector<DualSolution> construct_lower_bound(
 
    int len_N = N.size();
    int len_H = H.size();
+   
 
 
    for (int iter_2 = 0; iter_2<iterations_m2; iter_2++){

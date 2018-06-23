@@ -851,21 +851,26 @@ def primal_solver(solution, len_N, H, quantities, capacities, time):
         model.addConstr(quicksum([variables[k] for k in routes])<=1)
     model.update()
     model.setParam('TimeLimit', time)
+    model.update()
+
     model.optimize()
 
-    ## Extract the optimal Routes
-    routes_chosen = []
-    for v in model.getVars():
-        name = v.VarName
-        value = v.x
-        if value == 1.0:
-            r_number = int(name.split('_')[1])
-            routes_chosen.append(reduced_routes[r_number])
+    return model.ObjVal
 
-    # Format them
-    routes_formatted = {h:{"route":[], "load":0, "max_load":capacities[h]} for h in H}
-    for r in routes_chosen:
-        h = 'h_'+str(r["truck"] - len_N)
-        routes_formatted[h]["route"] = ['n_'+str(i) for i in r['path'][1:(len(r['path'])-1)]]
-        routes_formatted[h]["load"] = np.sum([quantities[n] for n in routes_formatted[h]["route"]])
+    if false:
+        ## Extract the optimal Routes
+        routes_chosen = []
+        for v in model.getVars():
+            name = v.VarName
+            value = v.x
+            if value == 1.0:
+                r_number = int(name.split('_')[1])
+                routes_chosen.append(reduced_routes[r_number])
+
+        # Format them
+        routes_formatted = {h:{"route":[], "load":0, "max_load":capacities[h]} for h in H}
+        for r in routes_chosen:
+            h = 'h_'+str(r["truck"] - len_N)
+            routes_formatted[h]["route"] = ['n_'+str(i) for i in r['path'][1:(len(r['path'])-1)]]
+            routes_formatted[h]["load"] = np.sum([quantities[n] for n in routes_formatted[h]["route"]])
     return routes_formatted
