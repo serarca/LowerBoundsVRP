@@ -521,6 +521,9 @@ DualSolution lower_bound_optimizer_M1(
       //cout<<lamb<<endl;
       //cout<<mu<<endl;
 
+
+
+
       // Check if the lower bound that we get improves
       if (lb.z_lb > max_val){
          max_val = lb.z_lb;
