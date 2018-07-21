@@ -160,6 +160,116 @@ LowerBound lower_bound_(
 }
 
 
+
+// Write lower bounds
+LowerBound lower_bound_debug(
+   vector<int> H,
+   vector<int> capacities,
+   vector<int> N,
+   vector<int> quantities,
+   vector<vector<double>> distance_dict,
+   vector<double> mu,
+   vector<double> lamb
+){
+
+   //Calculate lengths
+   int len_N = N.size();
+   int len_H = H.size();
+
+
+   //The vectors of minima
+   vector<vector<double>> b(len_N, vector<double>(len_H));
+   vector<vector<int>> val(len_N, vector<int>(len_H));
+   vector<vector<vector<int>>> b_routes(len_N, vector<vector<int>>(len_H, vector<int>(0)));
+   for (int h = 0; h < len_H; h++){
+      int truck_capacity = capacities[h];
+
+      PossibleValues possible = possible_values(quantities, truck_capacity);
+      QRoutes qroutes = construct_q_routes_(H[h], truck_capacity, N, distance_dict, possible.values, possible.values_pos, quantities);
+
+      // We find the minimum l
+
+      int len_values = possible.values.size();
+      for (int n = 0; n < len_N; n++){
+         vector<double> b_values(len_values);
+
+         for (int l = 0; l < len_values; l++){
+            //b_values[l] = (qroutes.psi[l][n] - mu[h]) * (double)quantities[n]/(double)possible.values[l];
+            b_values[l] = (qroutes.psi[l][n]) * (double)quantities[n]/(double)possible.values[l];
+         }
+
+         std::vector<double>::iterator l_it = std::min_element(b_values.begin(), b_values.end());
+         int l_min = std::distance(b_values.begin(), l_it);
+         b[n][h] = b_values[l_min];
+         b_routes[n][h] = qroutes.psi_route[l_min][n];
+         val[n][h] = possible.values[l_min];
+
+
+      }
+
+
+   }
+   cout<<"b_value "<<b[0][0]<<endl;
+
+
+   // The second vector of minima
+   vector<double> b_min(len_N);
+   vector<int> val_min(len_N);
+   vector<int> h_min(len_N);
+   vector<vector<int>> b_min_routes(len_N, vector<int>(0));
+   for (int n = 0; n < len_N; n++){
+      std::vector<double>::iterator h_it = std::min_element(b[n].begin(), b[n].end());
+      int h_m = std::distance(b[n].begin(), h_it);
+      b_min[n] = b[n][h_m];
+      b_min_routes[n] = b_routes[n][h_m];
+      val_min[n] = val[n][h_m];
+      h_min[n] = h_m;
+   }
+
+   //Calculate number of visits to each node
+   vector<vector<int>> visits(len_N,vector<int>(len_N,0));
+   for (int n = 0; n < len_N; n++){
+      for(vector<int>::iterator it_route = b_min_routes[n].begin();  it_route!=b_min_routes[n].end(); ++it_route){
+         if (*it_route < len_N){
+            visits[n][*it_route] += 1;
+         }
+      }
+   }
+
+
+   // Construct theta
+   vector<double> theta(len_N,0);
+   for (int j = 0; j<len_N; j++){
+      for (int i=0; i<len_N; i++){
+         theta[j] += ((double) quantities[i])/((double) val_min[i])*(double)visits[i][j];
+      }
+   }
+   // Construct rho
+   vector<double> rho(len_H,0);
+   for (int n=0; n<len_N; n++){
+      rho[h_min[n]] += ((double) quantities[n])/((double) val_min[n]);
+   }
+
+   // Construct dual variables
+   vector<double> u(len_N,0);
+   for (int n=0; n<len_N; n++){
+      u[n] = b_min[n] + lamb[n];
+   }
+   double start = 0;
+
+   double z_lb = std::accumulate(u.begin(), u.end(), start) + std::accumulate(mu.begin(), mu.end(), start);
+
+   LowerBound lb;
+   lb.z_lb = z_lb;
+   lb.u = u;
+   lb.theta = theta;
+   lb.rho = rho;
+
+   return lb;
+
+}
+
+
 // This function returns the q-paths that the q-routes function uses
 // to calulate lower bounds
 QPaths construct_q_paths_(
@@ -521,6 +631,29 @@ DualSolution lower_bound_optimizer_M1(
       //cout<<lamb<<endl;
       //cout<<mu<<endl;
 
+      // Check if we have reached a zero gradient
+      bool zero_gradient = true;
+      for (int i = 0; i < len_N; i++){
+         if (lb.theta[i] != 1.0){
+            zero_gradient = false;
+            break;
+         }
+      }
+      for (int i = 0; i < len_H; i++){
+         if (lb.rho[i] != 1.0){
+            zero_gradient = false;
+            break;
+         }
+      }
+      if (zero_gradient){
+         lb = lower_bound_debug(H, capacities, N, quantities, distance_dict, mu,lamb);
+         cout<<"Reached zero gradient"<<endl;
+         cout<<lb.z_lb<<endl;
+         break;
+      }
+
+
+
       // Check if the lower bound that we get improves
       if (lb.z_lb > max_val){
          max_val = lb.z_lb;
@@ -582,7 +715,7 @@ DualSolution lower_bound_optimizer_M1(
          }
       }
       // Check if we have reached a zero gradient
-      bool zero_gradient = true;
+      zero_gradient = true;
       for (int i = 0; i < len_N; i++){
          if (lb.theta[i] != 1.0){
             zero_gradient = false;

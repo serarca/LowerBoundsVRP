@@ -762,7 +762,10 @@ list<SimpleRoute> GENROUTE(
             it1++;
             it2++;
          }
-         SimpleRoutes.push_back(n_route);
+         // Before pushing the route, make sure it is feasible
+         if (capacity>=quantities[i]){
+            SimpleRoutes.push_back(n_route);
+         }
       }
    }
 
@@ -1189,12 +1192,25 @@ vector<DualSolution> construct_lower_bound(
    int len_N = N.size();
    int len_H = H.size();
 
+   cout<<"U from Christofides"<<endl;
+   cout<<sol.u<<endl;
+   cout<<"V from Christofides"<<endl;
+   cout<<sol.v<<endl;
 
 
    for (int iter_2 = 0; iter_2<iterations_m2; iter_2++){
       old_sol = sol;
       cout<<"Started Iteration of Bound 2 No. :"<<iter_2<<endl;
       sol = optimize_lower_bound_M2(iterations_grad_m2, z_ub, Delta, Delta_zero, gamma, gamma_zero, epsilon, H, capacities, N, quantities, geo_distance, old_sol.v, old_sol.lamb, old_sol.u, old_sol.routes, old_sol.gamma_guarantee);
+
+      cout<<"Bound M2:"<<sol.z_lb<<endl;
+      //Save the solutions
+      solutions[iter_2] = old_sol;
+
+      cout<<"Us from Baldacci"<<endl;
+      cout<<sol.u<<endl;
+      cout<<"Vs from Baldacci"<<endl;
+      cout<<sol.v<<endl;
       // Debugging
       if (iter_2 == 0){
          for (int i = 0; i < len_H; i++){
@@ -1207,9 +1223,7 @@ vector<DualSolution> construct_lower_bound(
             }
          }
       }
-      cout<<"Bound M2:"<<sol.z_lb<<endl;
-      //Save the solutions
-      solutions[iter_2] = old_sol;
+
    }
    cout<<"Finished Bounding"<<endl;
 
