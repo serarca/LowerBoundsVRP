@@ -10,6 +10,8 @@
 #include <numeric>
 #include <math.h>
 #include "prettyprint.hpp"
+template class std::vector<double>;
+template class std::vector<std::vector<double>>;
 
 
 
@@ -69,11 +71,10 @@ LowerBound lower_bound_(
    vector<vector<double>> b(len_N, vector<double>(len_H));
    vector<vector<int>> val(len_N, vector<int>(len_H));
    vector<vector<vector<int>>> b_routes(len_N, vector<vector<int>>(len_H, vector<int>(0)));
-
    for (int h = 0; h < len_H; h++){
       int truck_capacity = capacities[h];
-      PossibleValues possible = possible_values(quantities, truck_capacity);
 
+      PossibleValues possible = possible_values(quantities, truck_capacity);
       QRoutes qroutes = construct_q_routes_(H[h], truck_capacity, N, distance_dict, possible.values, possible.values_pos, quantities);
 
 
@@ -99,6 +100,7 @@ LowerBound lower_bound_(
 
 
    }
+
 
    // The second vector of minima
    vector<double> b_min(len_N);
@@ -176,6 +178,7 @@ QPaths construct_q_paths_(
 
    //Construct infinity
    double inf = numeric_limits<double>::infinity();
+   double inf_int = numeric_limits<int>::infinity();
 
    //Initialize the routes
    vector<vector<double>> f(len_values, vector<double> (len_N));
@@ -190,7 +193,6 @@ QPaths construct_q_paths_(
        phi[l][n] = inf;
       }
    }
-
    // Initialize the routes
    for (int n = 0; n < len_N; n++) {
       int q = quantities[n];
@@ -206,7 +208,6 @@ QPaths construct_q_paths_(
          q_route[l][n].insert(q_route[l][n].end(), args, args+2);
       }
    }
-
 
    for(int l = 0; l < len_values; l++) {
 
@@ -238,23 +239,27 @@ QPaths construct_q_paths_(
          int q_p = Q - quantities[x_i];
          if (q_p > 0){
             // Find the minimum
-            int arg_min_1;
-            int arg_min_2;
+            int arg_min_1 = inf_int;
+            int arg_min_2 = inf_int;
             double min_1 = inf;
             double min_2 = inf;
             for (int x_j = 0; x_j < len_N; x_j++){
                if (x_i!=x_j){
                   double value = g[x_i][x_j];
-                  if (value<min_1){
+                  if (value<=min_1){
                      min_2 = min_1;
                      min_1 = value;
                      arg_min_2 = arg_min_1;
                      arg_min_1 = x_j;
-                  } else if (value<min_2) {
+                  } else if (value<=min_2) {
                      min_2 = value;
                      arg_min_2 = x_j;
                   }
                }
+            }
+            // To fix the bug in case len_N==2
+            if (arg_min_2 == inf_int){
+               arg_min_2 = arg_min_1;
             }
             p[l][x_i] = arg_min_1;
             f[l][x_i] = min_1;
@@ -321,7 +326,7 @@ LB_GENPATH path_lower_bound(
          double min_F = infinity;
          int arg_min_F = -1;
          for (int qp = qp_lb; qp <= qp_ub; qp++){
-            if ((qpaths.f)[qp][i] < min_F){
+            if ((qpaths.f)[qp][i] <= min_F){
                min_F = (qpaths.f)[qp][i];
                arg_min_F = qp;
             }
@@ -380,6 +385,7 @@ QRoutes construct_q_routes_(
    map<int,int> values_pos,
    vector<int> quantities
 ){
+
 
    QPaths qpaths_l = construct_q_paths_(h,truck_capacity,N,distance_dict,values,values_pos,quantities,"left");
    QPaths qpaths_r = construct_q_paths_(h,truck_capacity,N,distance_dict,values,values_pos,quantities,"right");
@@ -507,6 +513,7 @@ DualSolution lower_bound_optimizer_M1(
    double max_val = -infinity;
 
    for (int iteration = 0; iteration<iterations; iteration++){
+
       vector<vector<double>> distance_dict = reduced_cost_matrix(geo_distance, lamb, mu);
       // We pass these routes to the algorithm that calculates the lower bound
       LowerBound lb = lower_bound_(H, capacities, N, quantities, distance_dict, mu,lamb);

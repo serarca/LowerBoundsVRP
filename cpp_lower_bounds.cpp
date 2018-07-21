@@ -12,7 +12,8 @@
         "extra_compile_args": [
             "-std=c++14", 
             "-mmacosx-version-min=10.9", 
-            "-g0"
+            "-g0", 
+            "-O3"
         ], 
         "include_dirs": [
             "/Users/sergiocamelo/anaconda/lib/python2.7/site-packages/numpy/core/include"

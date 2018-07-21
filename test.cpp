@@ -20,15 +20,56 @@ using  ms = chrono::milliseconds;
 using get_time = chrono::steady_clock ;
 #include "prettyprint.hpp"
 
+#include "nlohmann/json.hpp"
+#include <fstream>
 
+// for convenience
+using json = nlohmann::json;
 
 
 int main(){
+
+   std::ifstream i("/Users/sergiocamelo/Dropbox/Sergio-Joann/Code/DataInstances/instances/spatial/spatial_day_0.json");
+
+   json j;
+   i >> j;
+
+   vector<int> H = j["H"];
+
+
+   std::ofstream o("pretty.json");
+   o << std::setw(4) << j << std::endl;
 
    int H_len = 2;
    int N_len = 20;
    vector<int> capacities(H_len, 10);
    vector<int> quantities(N_len, 1);
+
+   capacities[0] = 60;
+   capacities[1] = 70;
+   quantities[0] = 1;
+   quantities[1] = 2;
+   quantities[2] = 3;
+   quantities[3] = 4;
+   quantities[4] = 5;
+   quantities[5] = 6;
+   quantities[6] = 7;
+   quantities[7] = 8;
+   quantities[8] = 9;
+   quantities[9] = 10;
+   quantities[10] = 1;
+   quantities[11] = 2;
+   quantities[12] = 3;
+   quantities[13] = 4;
+   quantities[14] = 5;
+   quantities[15] = 6;
+   quantities[16] = 7;
+   quantities[17] = 8;
+   quantities[18] = 9;
+   quantities[19] = 10;
+
+
+
    vector<int> N(N_len,0);
    for (int i = 0; i<N_len; i++){
       N[i] = i;

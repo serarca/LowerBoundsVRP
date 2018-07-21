@@ -55,6 +55,7 @@ vector<list<Path>> GENPATH(
 );
 
 list<SimpleRoute> GENROUTE(
+   double z_ub,
    int Delta,
    double gamma,
    int h,

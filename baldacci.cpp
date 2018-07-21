@@ -391,6 +391,7 @@ vector<list<Path>> GENPATH(
 }
 
 list<SimpleRoute> GENROUTE(
+   double z_ub,
    int Delta,
    double gamma,
    int h,
@@ -629,7 +630,7 @@ list<SimpleRoute> GENROUTE(
             it1++;
             it2++;
          }
-         if (copy.l_lb > copy.cost || copy.r_lb > copy.cost){
+         if (copy.l_lb > copy.cost + pow(10,-13)*z_ub || copy.r_lb > copy.cost + pow(10,-13)*z_ub){
             print_sroute(copy);
             cout<<"LB not working"<<endl;
             cout<<copy.l_lb - copy.cost<<endl;
@@ -668,11 +669,11 @@ list<SimpleRoute> GENROUTE(
             it1++;
             it2++;
          }
-         if (n_route.l_lb > n_route.cost || n_route.r_lb > n_route.cost){
+         if (n_route.l_lb > n_route.cost + pow(10,-13) * z_ub|| n_route.r_lb > n_route.cost + pow(10,-13) * z_ub){
             print_sroute(n_route);
             throw "The lower bounds are not properly working";
          }
-         if (n_route.cost < -pow(10,-12)){
+         if (n_route.cost < -pow(10,-13) * z_ub){
             // It is not necessary to check whether the route has been added or not, check later
             for (auto sroute:SimpleRoutes){
                if (sroute.path == n_route.path){
@@ -714,11 +715,11 @@ list<SimpleRoute> GENROUTE(
             it1++;
             it2++;
          }
-         if (n_route.l_lb > n_route.cost || n_route.r_lb > n_route.cost){
+         if (n_route.l_lb > n_route.cost + pow(10,-13)* z_ub || n_route.r_lb > n_route.cost + pow(10,-13)*z_ub){
             print_sroute(n_route);
             throw "The lower bounds are not properly working";
          }
-         if (n_route.cost < -pow(10,-12)){
+         if (n_route.cost < -pow(10,-13) * z_ub){
             // It is not necessary to check whether the route has been added or not, check later
             for (auto sroute:SimpleRoutes){
                if (sroute.path == n_route.path){
@@ -1065,7 +1066,7 @@ DualSolution optimize_lower_bound_M2(
    for (auto h:H){
       cout<<"Generating Routes for Truck: "<<h<<endl;
       double truck_guarantee;
-      Routes[h - len_N] = GENROUTE(Delta, gamma, h, capacities[h - len_N], N, quantities, distance_dict, geo_distance, terminated_initial, truck_guarantee);
+      Routes[h - len_N] = GENROUTE(z_ub, Delta, gamma, h, capacities[h - len_N], N, quantities, distance_dict, geo_distance, terminated_initial, truck_guarantee);
       initial_gamma_guarantee = min(truck_guarantee, initial_gamma_guarantee);
    }
    cout<<"    Gamma guarantee of previous bound: "<<initial_gamma_guarantee<<endl;
@@ -1116,11 +1117,11 @@ DualSolution optimize_lower_bound_M2(
          // Check the cost is that of the reduced variables
          cout<<"Calculating negative routes of truck: "<<h<<endl;
          double truck_zero_gamma_guarantee;
-         newRoutes[h - len_N] = GENROUTE(Delta_zero_current, gamma_zero, h, capacities[h - len_N], N, quantities, new_distance_dict, geo_distance, terminated_neg, truck_zero_gamma_guarantee);
+         newRoutes[h - len_N] = GENROUTE(z_ub, Delta_zero_current, gamma_zero, h, capacities[h - len_N], N, quantities, new_distance_dict, geo_distance, terminated_neg, truck_zero_gamma_guarantee);
          cout<<"    Truck zero gamma guarantee: "<<truck_zero_gamma_guarantee<<endl;
          cout<<"Adding new routes: "<<h<<endl;
          for (auto route:newRoutes[h - len_N]){
-            if (route.cost < - pow(10,-12)){
+            if (route.cost < - pow(10,-13) * z_ub){
                Routes[h - len_N].push_back(route);
                //print_sroute(route);
                ++new_routes_count;
@@ -1187,7 +1188,7 @@ vector<DualSolution> construct_lower_bound(
 
    int len_N = N.size();
    int len_H = H.size();
-   
+
 
 
    for (int iter_2 = 0; iter_2<iterations_m2; iter_2++){
@@ -1198,7 +1199,7 @@ vector<DualSolution> construct_lower_bound(
       if (iter_2 == 0){
          for (int i = 0; i < len_H; i++){
             for (auto r:old_sol.routes[i]){
-               if(r.cost<-pow(10,-14)){
+               if(r.cost<-pow(10,-13)*z_ub){
                   print_sroute(r);
                   cout<<"Chris"<<endl;
                   throw "Found route that violates Christofides";
@@ -1225,7 +1226,7 @@ vector<DualSolution> construct_lower_bound(
    for (auto h:H){
       double truck_guarantee;
       cout<<"Calculating Routes of Truck: "<<h<<endl;
-      FinalRoutes[h - len_N] = GENROUTE(Delta_final, gamma_final, h, capacities[h - len_N], N, quantities, distance_dict, geo_distance, terminated_final, truck_guarantee);
+      FinalRoutes[h - len_N] = GENROUTE(z_ub, Delta_final, gamma_final, h, capacities[h - len_N], N, quantities, distance_dict, geo_distance, terminated_final, truck_guarantee);
       final_gamma_guarantee = min(final_gamma_guarantee, truck_guarantee);
    }
    //p_v(sol.u);

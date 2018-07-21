@@ -855,9 +855,9 @@ def primal_solver(solution, len_N, H, quantities, capacities, time):
 
     model.optimize()
 
-    return model.ObjVal
+    #return model.ObjVal
 
-    if false:
+    if True:
         ## Extract the optimal Routes
         routes_chosen = []
         for v in model.getVars():
